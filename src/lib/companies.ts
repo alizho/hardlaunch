@@ -1,11 +1,10 @@
 /// <reference types="vite/client" />
-// Turns the `companies` list into what the balloons and the directory render.
-import { companies, type Company, type Point } from "../data/content";
+// Turns the `companies` list into what the balloons render.
+import { companies, type Point } from "../data/content";
 
 const FIGMA_WIDTH = 1728;
 const BALLOON_RANGE: Point = [60, 120]; // longest side a logo can keep as exported
 const BALLOON_FALLBACK = 90; // longest side of a logo rescaled into range
-const DIRECTORY_SCALE = 0.3608; // directory logo width, relative to the balloon
 const PHONE_BALLOON_SCALE = 0.58; // matches --balloon-scale in styles.css
 const SEARCH_STEP = 15;
 
@@ -25,12 +24,6 @@ export type BalloonDef = {
   // Intro only: where this balloon sits relative to the centered logo, in design px.
   scatter: Point;
   scatterPhone: Point;
-};
-
-export type Launch = Pick<Company, "id" | "name" | "year" | "color" | "tiles"> & {
-  logo: string;
-  w: number;
-  h: number;
 };
 
 type Art = { src: string; w: number; h: number };
@@ -138,13 +131,4 @@ function placeBalloons(): BalloonDef[] {
   return balloons.sort((a, b) => a.x - b.x);
 }
 
-function toLaunch(company: Company): Launch {
-  const { id, name, year, color, tiles, directoryWidth } = company;
-  const own = readArt(`${id}.directory`);
-  const art = own ?? balloonArt(id);
-  const w = directoryWidth ?? (own ? own.w : art.w * DIRECTORY_SCALE);
-  return { id, name, year, color, tiles, logo: art.src, w, h: (w * art.h) / art.w };
-}
-
 export const balloons = placeBalloons();
-export const launches = companies.map(toLaunch);

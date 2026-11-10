@@ -7,15 +7,13 @@ export const INTRO = {
   phoneLogoCenterScale: 1.3,
   balloonPop: 200,
   balloonStagger: 55,
-  // 2. Up to the header
+  // 2. The logo settles above the tagline while the balloons rise to the top.
   lift: 1250,
   liftDuration: 800,
   // Phones have no room beside the logo, so the balloons get out of its way first.
   phoneBalloonRise: 1100,
-  // 3. Content. Starts just before the logo lands so the page never waits on it.
+  // 3. Tagline. Starts just before the logo lands so the page never waits on it.
   tagline: 1850,
-  content: 1950,
-  contentStagger: 110,
 
   // The bounce on every intro pop.
   bounceSwings: 3.2, // frequency: half-swings per pop. Lower is fewer, slower swings.
@@ -50,13 +48,11 @@ const ASSET_TIMEOUT = 1500;
 
 const root = document.documentElement;
 
-// Runs before the first render so nothing can paint ahead of the intro. Deep
-// links and reduced-motion visitors get the finished page straight away.
+// Runs before the first render so nothing can paint ahead of the intro.
+// Reduced-motion visitors get the finished page straight away.
 export function prepareIntro() {
-  if (location.hash || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
   root.dataset.intro = "pending";
-  // The intro always plays from the top of the page.
-  history.scrollRestoration = "manual";
 }
 
 export const isIntroPending = () => root.dataset.intro === "pending";
@@ -91,7 +87,7 @@ export function pop(el: Element, delay: number, from: number, duration = 640) {
 
 // Plays everything except the balloons, which BalloonField drives because their
 // positions belong to the physics world. Returns a cleanup function.
-export function playIntro(onReveal: () => void) {
+export function playIntro() {
   let cancelled = false;
   let revealTimer = 0;
   const running: Animation[] = [];
@@ -99,7 +95,6 @@ export function playIntro(onReveal: () => void) {
   introAssetsReady().then(() => {
     if (cancelled) return;
     const find = <T extends Element>(selector: string) => [...document.querySelectorAll<T>(selector)];
-    const contentAt = (step: number) => INTRO.content + step * INTRO.contentStagger;
 
     const [frame] = find<HTMLElement>(".site-logo");
     const [logo] = find<HTMLElement>(".site-logo a");
@@ -137,24 +132,9 @@ export function playIntro(onReveal: () => void) {
       );
     }
 
-    // Thumbnails and menu share the same steps, so they run down the page together.
-    find(".main-thumb, .side-thumb, .all-launches-hit").forEach((el, step) =>
-      running.push(pop(el, contentAt(step), step === 0 ? 0.94 : 0.88)),
-    );
-    find(".nav-icons").forEach((el, step) => running.push(pop(el, contentAt(step), 0.6, 580)));
-    for (const sidebar of find(".sidebar")) {
-      running.push(
-        sidebar.animate(
-          { opacity: [0, 1] },
-          { delay: contentAt(0), duration: 200, easing: "ease-out", fill: "backwards" },
-        ),
-      );
-    }
-
     root.dataset.intro = "playing";
     revealTimer = window.setTimeout(() => {
       delete root.dataset.intro;
-      onReveal();
     }, INTRO.tagline);
   });
 
