@@ -302,17 +302,19 @@ export function BalloonField({ heroRef, logoRef }: Props) {
     // Only simulate while the hero is on screen.
     let raf = 0;
     let holding = intro; // Stay pinned around the logo until the intro lets go.
-    let last = performance.now();
+    // Frame times are only ever compared with each other: the clock behind
+    // them isn't guaranteed to agree with performance.now().
+    let last = 0; // 0 until the first frame after starting
     const frame = (now: number) => {
       syncLogo();
-      world.step((now - last) / 1000);
+      if (last) world.step((now - last) / 1000);
       last = now;
       world.render();
       raf = requestAnimationFrame(frame);
     };
     const start = () => {
       if (raf || holding) return;
-      last = performance.now();
+      last = 0;
       raf = requestAnimationFrame(frame);
     };
     const stop = () => {

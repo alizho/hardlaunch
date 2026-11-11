@@ -394,6 +394,11 @@ export class BalloonWorld {
   }
 
   step(frameDt: number) {
+    // Two frames can carry the same timestamp, or one earlier than the last
+    // (Safari rounds them to the millisecond). A step of no length would have
+    // `rise` divide by zero and turn every position into NaN, which the browser
+    // rejects as a transform, leaving the balloons stuck where they are for good.
+    if (!(frameDt > 0)) return;
     const dt = Math.min(frameDt, 1 / 30) / SUBSTEPS;
     for (let i = 0; i < SUBSTEPS; i++) this.substep(dt);
     const decay = Math.exp(-Math.min(frameDt, 1 / 30) * 10);

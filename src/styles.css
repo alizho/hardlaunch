@@ -466,6 +466,23 @@ html.custom-cursor * {
   -webkit-user-drag: none;
 }
 
+/* Diagnostics (temporary): each is switched on from the URL, see main.tsx. */
+html.off-blend .balloon {
+  mix-blend-mode: normal;
+}
+
+html.off-shadow .balloon img {
+  filter: none;
+}
+
+html.off-layers .balloon {
+  will-change: auto;
+}
+
+html.off-white .hero-white {
+  display: none;
+}
+
 /* Page-load intro: see lib/intro.ts for the timeline. */
 html[data-intro="pending"] :is(.site-logo a, .hero-white, .tagline, .social, .balloon img) {
   opacity: 0;
