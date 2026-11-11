@@ -3,17 +3,20 @@
 export const INTRO = {
   // 1. Center
   logoPop: 0,
-  logoCenterScale: 1.5, // how large the logo is at center, shrinking to 1 on the way up
-  phoneLogoCenterScale: 1.3,
+  // Where the balloons start: "ring" spaces them evenly around the logo,
+  // "scattered" drops them at random near the logo without touching it.
+  balloonStart: "scattered" as "ring" | "scattered",
   balloonPop: 200,
   balloonStagger: 55,
   // 2. The logo settles above the tagline while the balloons rise to the top.
   lift: 1250,
-  liftDuration: 800,
-  // Phones have no room beside the logo, so the balloons get out of its way first.
-  phoneBalloonRise: 1100,
+  liftDuration: 1600,
+  balloonFloat: 3200, // how long the balloons take to reach the top
+  // The white gradient rises from below, a little ahead of the logo.
+  white: 1600,
+  whiteDuration: 1500,
   // 3. Tagline. Starts just before the logo lands so the page never waits on it.
-  tagline: 1850,
+  tagline: 2450,
 
   // The bounce on every intro pop.
   bounceSwings: 3.2, // frequency: half-swings per pop. Lower is fewer, slower swings.
@@ -23,7 +26,7 @@ export const INTRO = {
 
 // Sampled into a CSS linear() curve, since a spring can't be written as a bezier.
 function buildBounceEasing() {
-  if (!CSS.supports("transition-timing-function", "linear(0, 1)")) return "cubic-bezier(0.34, 1.4, 0.64, 1)";
+  if (!CSS.supports("transition-timing-function", "linear(0, 1)")) return "cubic-bezier(0.51, 0.01, 0.17, 0.94)";
   const { bounceSwings, bounceDecay, bounceOvershoot } = INTRO;
   const SAMPLES = 60;
   const frequency = bounceSwings * Math.PI;
@@ -43,7 +46,9 @@ function buildBounceEasing() {
 }
 
 const BOUNCE_EASING = buildBounceEasing();
-const LIFT_EASING = "cubic-bezier(0.7, 0, 0.15, 1)";
+const LIFT_EASING = "cubic-bezier(0.45, 0, 0.2, 1)";
+// Out-circ: quick off the mark, then a long, soft settle.
+const WHITE_EASING = "cubic-bezier(0, 0.55, 0.45, 1)";
 const ASSET_TIMEOUT = 1500;
 
 const root = document.documentElement;
@@ -101,24 +106,20 @@ export function playIntro() {
     const [logoImage] = find<HTMLElement>(".site-logo img");
     const { top, height } = frame.getBoundingClientRect();
     const toCenter = window.innerHeight / 2 - (top + height / 2);
-    const centerScale = matchMedia("(max-width: 899px)").matches
-      ? INTRO.phoneLogoCenterScale
-      : INTRO.logoCenterScale;
     running.push(
-      // The pop is on the image so its scale multiplies with the link's center scale.
       pop(logoImage, INTRO.logoPop, 0.72, 860),
       logo.animate(
-        { translate: [`0 ${toCenter}px`, "0 0"], scale: [centerScale, 1] },
+        { translate: [`0 ${toCenter}px`, "0 0"] },
         { delay: INTRO.lift, duration: INTRO.liftDuration, easing: LIFT_EASING, fill: "backwards" },
       ),
     );
 
-    // The white rises from below the fold over the blue, in step with the logo.
+    // The white rises from below the fold over the blue.
     for (const white of find(".hero-white")) {
       running.push(
         white.animate(
           { translate: [`0 ${window.innerHeight}px`, "0 0"] },
-          { delay: INTRO.lift, duration: INTRO.liftDuration, easing: LIFT_EASING, fill: "backwards" },
+          { delay: INTRO.white, duration: INTRO.whiteDuration, easing: WHITE_EASING, fill: "backwards" },
         ),
       );
     }

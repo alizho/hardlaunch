@@ -21,6 +21,7 @@ export type BalloonDef = {
   y: number;
   w: number;
   h: number;
+  link?: string;
   // Intro only: where this balloon sits relative to the centered logo, in design px.
   scatter: Point;
   scatterPhone: Point;
@@ -124,7 +125,7 @@ function placeBalloons(): BalloonDef[] {
       scatterPhone = roomiest(scatterCandidates(PHONE_SCATTER_AREA, phoneR), phoneScatters, phoneR);
       phoneScatters.push({ x: scatterPhone[0], y: scatterPhone[1], r: phoneR });
     }
-    return { id: company.id, src: art.src, x: home[0], y: home[1], w: art.w, h: art.h, scatter, scatterPhone };
+    return { id: company.id, link: company.link, src: art.src, x: home[0], y: home[1], w: art.w, h: art.h, scatter, scatterPhone };
   });
 
   // Left to right by home position, which is also the order they pop in.

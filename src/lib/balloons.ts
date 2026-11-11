@@ -14,7 +14,7 @@ export type Body = {
   phase: number;
   rest: number; // height this balloon settles at if nothing is above it
   el: HTMLElement;
-  launch?: { x: number; y: number; from: number; until: number; rate: number }; // intro: rising to this spot
+  launch?: { fromX: number; fromY: number; fromRot: number; x: number; y: number; start: number; duration: number }; // intro: floating to this spot
 };
 
 export type Rect = { x: number; y: number; w: number; h: number; r: number };
@@ -43,10 +43,12 @@ const BALLOON_BOUNCE = 0.5;
 const WALL_BOUNCE = 0.5;
 const CEILING_BOUNCE = 0.25;
 const SUBSTEPS = 3;
-// Critically damped, so a launched balloon eases off from rest and arrives without overshoot.
-const LAUNCH_STIFFNESS = 14;
-const LAUNCH_DAMPING = 7.5;
-const LAUNCH_TIME = 1.6;
+// The intro float: released from rest, climbing steadily, slowing as it reaches the top.
+const liftCurve = (t: number) => 1 - (1 - t * t) ** 2.2;
+const SWAY_CYCLES = 1.25; // side-to-side swings over the whole float
+const SWAY_REACH = 0.24; // how far a balloon swings, relative to its radius
+const DURATION_SPREAD = 0.05; // balloons take up to this fraction longer or shorter
+const REST_GAP = 6; // space between balloons when they settle at the top
 
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
 
@@ -66,10 +68,25 @@ export class BalloonWorld {
     this.bodies.push(body);
   }
 
-  // `rate` above 1 speeds the whole rise up by that factor.
-  launch(body: Body, x: number, y: number, delay: number, rate = 1) {
-    const from = this.time + delay;
-    body.launch = { x, y, from, until: from + LAUNCH_TIME / rate, rate };
+  // Where each balloon stops if it floats straight up. The highest claim the top
+  // first, and any that would overlap settle just beneath.
+  settleStraightUp() {
+    const spots = new Map<Body, { x: number; y: number }>();
+    for (const b of [...this.bodies].sort((a, c) => a.y - c.y)) {
+      const x = clamp(b.x, b.r, this.width - b.r);
+      let y = b.rest;
+      const blocked = () =>
+        [...spots].some(([other, spot]) => Math.hypot(spot.x - x, spot.y - y) < other.r + b.r + REST_GAP);
+      while (blocked()) y += 4;
+      spots.set(b, { x, y });
+      b.rest = y;
+    }
+    return spots;
+  }
+
+  launch(body: Body, x: number, y: number, duration: number) {
+    const spread = 1 + Math.sin(body.phase * 5) * DURATION_SPREAD;
+    body.launch = { fromX: body.x, fromY: body.y, fromRot: body.rot, x, y, start: this.time, duration: duration * spread };
   }
 
   movePointer(x: number, y: number, dt: number, inside: boolean) {
@@ -85,6 +102,7 @@ export class BalloonWorld {
   }
 
   grab(body: Body) {
+    body.launch = undefined;
     this.grabbed = body;
     this.grabOffset = { x: body.x - this.pointer.x, y: body.y - this.pointer.y };
   }
@@ -121,19 +139,23 @@ export class BalloonWorld {
     }
     this.collideBalloons();
     for (const b of this.bodies) {
-      // During the intro the logo's collider is already at the header, ahead of the logo itself.
-      if (!b.launch) this.collideLogo(b);
+      // A floating balloon ignores everything, so it can pass behind the logo.
+      if (b.launch) continue;
+      this.collideLogo(b);
       this.collideBounds(b);
     }
   }
 
+  // Sets the velocity that lands exactly on the curve, so tilt follows the sway
+  // and the balloon hands over to `float` without a jump.
   private rise(b: Body, launch: NonNullable<Body["launch"]>, dt: number) {
-    if (this.time < launch.from) return;
-    const stiffness = LAUNCH_STIFFNESS * launch.rate * launch.rate;
-    const damping = LAUNCH_DAMPING * launch.rate;
-    b.vx += ((launch.x - b.x) * stiffness - b.vx * damping) * dt;
-    b.vy += ((launch.y - b.y) * stiffness - b.vy * damping) * dt;
-    if (this.time >= launch.until) b.launch = undefined;
+    const t = Math.min(1, (this.time - launch.start) / launch.duration);
+    const lift = liftCurve(t);
+    // The envelope keeps the sway at zero where the float starts and ends.
+    const sway = Math.sin(t * SWAY_CYCLES * 2 * Math.PI + b.phase) * Math.sin(t * Math.PI) * b.r * SWAY_REACH;
+    b.vx = (launch.fromX + (launch.x - launch.fromX) * lift + sway - b.x) / dt;
+    b.vy = (launch.fromY + (launch.y - launch.fromY) * lift - b.y) / dt;
+    if (t >= 1) b.launch = undefined;
   }
 
   private isUnderBalloon(b: Body) {
@@ -202,6 +224,8 @@ export class BalloonWorld {
       for (let j = i + 1; j < list.length; j++) {
         const a = list[i];
         const b = list[j];
+        // Rising balloons pass each other, so the formation holds its shape.
+        if (a.launch || b.launch) continue;
         const dx = b.x - a.x;
         const dy = b.y - a.y;
         const min = a.r + b.r;
@@ -293,7 +317,13 @@ export class BalloonWorld {
     for (const b of this.bodies) {
       const sway = Math.sin(this.time * 0.8 + b.phase) * 2.5;
       const target = clamp(b.vx * 0.03, -20, 20) + sway;
-      b.rot += (target - b.rot) * (1 - Math.exp(-dt * 5));
+      if (b.launch) {
+        // Unwinds along the float's own curve, so the starting tilt never snaps.
+        const t = Math.min(1, (this.time - b.launch.start) / b.launch.duration);
+        b.rot = b.launch.fromRot + (target - b.launch.fromRot) * liftCurve(t);
+      } else {
+        b.rot += (target - b.rot) * (1 - Math.exp(-dt * 5));
+      }
     }
   }
 }

@@ -2,13 +2,85 @@ import { useEffect, useRef, type RefObject } from "react";
 import { BalloonWorld, type Body } from "../lib/balloons";
 import { balloons } from "../lib/companies";
 import { INTRO, introAssetsReady, isIntroPending, pop } from "../lib/intro";
+import type { Point } from "../data/content";
 
 const FIGMA_WIDTH = 1728;
-const MAX_RISE_DELAY = 0.22; // seconds between the first and last balloon leaving
-const PHONE_MAX_RISE_DELAY = 0.08;
-const PHONE_RISE_RATE = 1.4; // how much faster the balloons rise on phones
-const PHONE_LOGO_COLUMN = 156; // half-width of the path the centered logo rises through
-const PHONE_BELOW_LOGO_DELAY = 0.45; // seconds
+// The intro ring around the logo, as half-width and half-height in design px.
+const RING: Point = [420, 250];
+const PHONE_RING: Point = [185, 265];
+const RING_EDGE = 70; // space the ring keeps from the edges of the screen
+const RING_STAGGER = 0.88; // every other balloon sits this much closer to the logo
+const RING_LOGO_GAP = 6; // space a balloon keeps from the logo at the start
+// How far scattered balloons can start from the logo's center, as the half-width
+// and half-height of an oval in design px. Smaller keeps them closer in.
+const SCATTER_REACH: Point = [560, 350];
+const PHONE_SCATTER_REACH: Point = [195, 300];
+const SCATTER_EDGE = 16; // space scattered balloons keep from the edges of the screen
+const SCATTER_LOGO_GAP = 60; // space scattered balloons keep from the logo
+const SCATTER_TRIES = 120;
+// A press that moves less than this (px) and lets go within this time (ms)
+// is a click, which opens the company's link, rather than a drag.
+const CLICK_SLOP = 6;
+const CLICK_TIME = 500; // valid spots compared per balloon; more spreads them more evenly
+
+// Points spaced evenly by distance around an ellipse, starting half a step past
+// its right edge so the top and bottom halves get the same number.
+function ringSpots(count: number, rx: number, ry: number): Point[] {
+  const SAMPLES = 720;
+  const at = (i: number): Point => {
+    const angle = (i / SAMPLES) * 2 * Math.PI;
+    return [Math.cos(angle) * rx, Math.sin(angle) * ry];
+  };
+  const lengths = [0];
+  for (let i = 1; i <= SAMPLES; i++) {
+    const [ax, ay] = at(i - 1);
+    const [bx, by] = at(i);
+    lengths[i] = lengths[i - 1] + Math.hypot(bx - ax, by - ay);
+  }
+  return Array.from({ length: count }, (_, k) => {
+    const distance = ((k + 0.5) / count) * lengths[SAMPLES];
+    const [x, y] = at(lengths.findIndex((length) => length >= distance));
+    const depth = k % 2 ? RING_STAGGER : 1;
+    return [x * depth, y * depth];
+  });
+}
+
+// Random spots in an oval around the logo. Each balloon tries several and keeps
+// the one farthest from the balloons already placed, so they don't clump.
+function scatterAroundLogo(
+  bodies: Body[],
+  width: number,
+  height: number,
+  logo: Point,
+  logoSize: Point,
+  [reachX, reachY]: Point,
+) {
+  const placed: Body[] = [];
+  for (const b of bodies) {
+    const clearX = logoSize[0] / 2 + b.r + SCATTER_LOGO_GAP;
+    const clearY = logoSize[1] / 2 + b.r + SCATTER_LOGO_GAP;
+    const inset = b.r + SCATTER_EDGE;
+    let bestGap = -Infinity;
+    let found = 0;
+    for (let attempt = 0; found < SCATTER_TRIES && attempt < SCATTER_TRIES * 50; attempt++) {
+      const dx = (Math.random() * 2 - 1) * reachX;
+      const dy = (Math.random() * 2 - 1) * reachY;
+      const x = logo[0] + dx;
+      const y = logo[1] + dy;
+      if ((dx / reachX) ** 2 + (dy / reachY) ** 2 > 1) continue;
+      if (x < inset || x > width - inset || y < inset || y > height - inset) continue;
+      if (Math.abs(dx) < clearX && Math.abs(dy) < clearY) continue;
+      found++;
+      const gap = Math.min(Infinity, ...placed.map((p) => Math.hypot(x - p.x, y - p.y) - p.r - b.r));
+      if (gap > bestGap) {
+        bestGap = gap;
+        b.x = x;
+        b.y = y;
+      }
+    }
+    placed.push(b);
+  }
+}
 
 type Props = {
   heroRef: RefObject<HTMLElement | null>;
@@ -86,39 +158,58 @@ export function BalloonField({ heroRef, logoRef }: Props) {
       world.add(body);
     });
 
-    // Intro: scatter the balloons around the centered logo.
+    // Intro: space the balloons evenly around the centered logo, keeping each
+    // company's `scatter` as its place in the order around the ring.
     const intro = isIntroPending();
-    const homes = world.bodies.map((b) => ({ x: b.x, y: b.y }));
-    const riseDelays: number[] = [];
     if (intro) {
       const { w, x } = world.logo;
       const offsets = balloons.map((def) => (phone ? def.scatterPhone : def.scatter));
       const centerY = (window.innerHeight / 2 - hero.getBoundingClientRect().top) / world.unit;
-      const heights = offsets.map(([, dy]) => dy);
-      const top = Math.min(...heights);
-      const span = Math.max(...heights) - top;
-      world.bodies.forEach((b, i) => {
-        const [dx, dy] = offsets[i];
+      const [ringX, ringY] = phone ? PHONE_RING : RING;
+      const spots = ringSpots(
+        world.bodies.length,
+        Math.min(ringX, world.width / 2 - RING_EDGE),
+        Math.min(ringY, centerY - RING_EDGE),
+      );
+      const clockwise = (i: number) => (Math.atan2(offsets[i][1], offsets[i][0]) + 2 * Math.PI) % (2 * Math.PI);
+      const order = world.bodies.map((_, i) => i).sort((a, c) => clockwise(a) - clockwise(c));
+      order.forEach((bodyIndex, slot) => {
+        const b = world.bodies[bodyIndex];
+        let [dx, dy] = spots[slot];
+        // Phones have a narrower ring than the logo, so anything behind it moves to its side.
+        const clearX = w / 2 + b.r + RING_LOGO_GAP;
+        if (Math.abs(dx) < clearX && Math.abs(dy) < world.logo.h / 2 + b.r + RING_LOGO_GAP) {
+          dx = Math.sign(dx) * clearX;
+        }
         b.x = x + w / 2 + dx;
         b.y = centerY + dy;
         b.rot = Math.sin(b.phase * 3) * 14;
-        // The highest balloons leave first, so nothing rises into one still waiting.
-        riseDelays[i] = ((dy - top) / span) * (phone ? PHONE_MAX_RISE_DELAY : MAX_RISE_DELAY);
-        // On phones, balloons directly below the logo wait for it to lift out of their way.
-        if (phone && dy > 0 && Math.abs(dx) < PHONE_LOGO_COLUMN) riseDelays[i] = PHONE_BELOW_LOGO_DELAY;
       });
+      if (INTRO.balloonStart === "scattered") {
+        const reach = phone ? PHONE_SCATTER_REACH : SCATTER_REACH;
+        scatterAroundLogo(world.bodies, world.width, centerY * 2, [x + w / 2, centerY], [w, world.logo.h], reach);
+      }
     }
 
     world.render();
     hero.dataset.balloons = "ready";
 
     if (reduced) {
+      // No dragging here, so any click opens the link.
+      const onClick = (e: MouseEvent) => {
+        const link = balloons[elements.current.indexOf(e.currentTarget as HTMLDivElement)]?.link;
+        if (link) window.open(link, "_blank", "noopener,noreferrer");
+      };
       const onResize = () => {
         measure();
         world.render();
       };
       window.addEventListener("resize", onResize);
-      return () => window.removeEventListener("resize", onResize);
+      elements.current.forEach((el) => el?.addEventListener("click", onClick));
+      return () => {
+        window.removeEventListener("resize", onResize);
+        elements.current.forEach((el) => el?.removeEventListener("click", onClick));
+      };
     }
 
     // Pointer tracking: page-wide so a fast sweep into the hero still registers.
@@ -138,10 +229,12 @@ export function BalloonField({ heroRef, logoRef }: Props) {
       world.movePointer(p.x, p.y, (now - lastMove) / 1000, p.inside);
       lastMove = now;
     };
+    let press: { x: number; y: number; t: number; link?: string } | null = null;
     const onDown = (e: PointerEvent) => {
       const index = elements.current.indexOf(e.currentTarget as HTMLDivElement);
       const body = world.bodies[index];
       if (!body) return;
+      press = { x: e.clientX, y: e.clientY, t: performance.now(), link: balloons[index]?.link };
       e.preventDefault();
       const p = toWorld(e);
       world.movePointer(p.x, p.y, 0, true);
@@ -151,7 +244,17 @@ export function BalloonField({ heroRef, logoRef }: Props) {
       body.el.setPointerCapture(e.pointerId);
       root.classList.add("is-grabbing");
     };
-    const onUp = () => {
+    const onUp = (e: PointerEvent) => {
+      const p = press;
+      press = null;
+      if (
+        e.type === "pointerup" &&
+        p?.link &&
+        Math.hypot(e.clientX - p.x, e.clientY - p.y) < CLICK_SLOP &&
+        performance.now() - p.t < CLICK_TIME
+      ) {
+        window.open(p.link, "_blank", "noopener,noreferrer");
+      }
       if (!world.grabbed) return;
       world.release();
       root.classList.remove("is-grabbing");
@@ -206,11 +309,14 @@ export function BalloonField({ heroRef, logoRef }: Props) {
         });
         releaseTimer = window.setTimeout(() => {
           holding = false;
-          world.bodies.forEach((b, i) =>
-            world.launch(b, homes[i].x, homes[i].y, riseDelays[i], phone ? PHONE_RISE_RATE : 1),
-          );
+          // They all leave together and float straight up from where they are.
+          const spots = world.settleStraightUp();
+          for (const b of world.bodies) {
+            const spot = spots.get(b)!;
+            world.launch(b, spot.x, spot.y, INTRO.balloonFloat / 1000);
+          }
           start();
-        }, phone ? INTRO.phoneBalloonRise : INTRO.lift);
+        }, INTRO.lift);
       });
     }
 

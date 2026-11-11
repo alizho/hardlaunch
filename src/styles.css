@@ -27,7 +27,7 @@
   --blue: #00aeff;
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
   /* The logo and tagline are centered as one group. */
-  --logo-height: 11.254rem;
+  --logo-height: 16.881rem;
   --tagline-gap: 3.2rem;
   --tagline-height: 4.167rem;
   --group-height: calc(var(--logo-height) + var(--tagline-gap) + var(--tagline-height));
@@ -135,9 +135,9 @@ html.custom-cursor * {
   z-index: 25;
   left: 50%;
   top: calc(50svh - var(--group-height) / 2);
-  width: 26.4rem;
+  width: 39.6rem;
   height: var(--logo-height);
-  margin-left: -13.2rem;
+  margin-left: -19.8rem;
 }
 
 .site-logo a,
@@ -187,6 +187,129 @@ html.custom-cursor * {
   text-align: center;
   color: #fff;
   text-shadow: 0 0.2604rem 0.612rem rgba(0, 0, 0, 0.2);
+  /* Above the balloons, so the example images aren't covered. */
+  z-index: 1;
+}
+
+/* Underlined tagline words that reveal an example image. */
+.keyword {
+  position: relative;
+  display: inline-block;
+  cursor: default;
+  outline: none;
+}
+
+/* Empty inline-block whose bottom marks the baseline, for measuring. */
+.baseline-probe {
+  display: inline-block;
+  width: 0;
+  height: 0;
+}
+
+/* Rounded underline, broken around descenders (see lib/underline.ts). */
+.underline {
+  position: absolute;
+  left: 0;
+  right: 0;
+  pointer-events: none;
+}
+
+.underline-seg {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-radius: 999px;
+  background: currentColor;
+  box-shadow: 0 0.1rem 0.3rem rgba(0, 0, 0, 0.15);
+}
+
+/* One shared preview: it pops in under a word, slides between words,
+   and leans slightly toward the cursor (see Tagline.tsx). */
+.example-preview {
+  --w: 22rem;
+  --x: 50%;
+  --y: 100%;
+  --ratio: 0.62;
+  --ease-pop: cubic-bezier(0.34, 1.25, 0.64, 1);
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: var(--w);
+  transform: translate(calc(var(--x) - 50%), calc(var(--y) + 1.2rem));
+  transition: transform 420ms var(--ease-out);
+  pointer-events: none;
+  user-select: none;
+}
+
+@supports (transition-timing-function: linear(0, 1)) {
+  .example-preview {
+    /* A gentle overshoot: one small bounce, then settled. */
+    --ease-pop: linear(0, 0.22 6%, 0.6 14%, 0.9 23%, 1.03 31%, 1.05 36%, 1.035 45%, 1.005 60%, 0.998 75%, 1);
+  }
+}
+
+.example-preview[data-instant] {
+  transition: none;
+}
+
+.example-track {
+  display: block;
+  will-change: transform;
+}
+
+.example-pop {
+  position: relative;
+  display: block;
+  height: calc(var(--w) * var(--ratio));
+  overflow: hidden;
+  border-radius: 0.8rem;
+  box-shadow: 0 0.6rem 2rem rgba(0, 0, 0, 0.18);
+  opacity: 0;
+  transform: translateY(-0.4rem) scale(0.95);
+  transform-origin: 50% 0;
+  /* Closing: quick, no bounce. */
+  transition:
+    opacity 140ms ease-out,
+    transform 160ms ease-out,
+    height 420ms var(--ease-out);
+}
+
+.example-preview[data-open] .example-pop {
+  opacity: 1;
+  transform: none;
+  /* Opening: a slight bounce. */
+  transition:
+    opacity 160ms var(--ease-out),
+    transform 480ms var(--ease-pop),
+    height 420ms var(--ease-out);
+}
+
+.example-pop img {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  object-fit: cover;
+  opacity: 0;
+  transition: opacity 240ms ease-out;
+  -webkit-user-drag: none;
+}
+
+.example-pop img[data-active] {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .example-preview {
+    transition: none;
+  }
+  .example-pop,
+  .example-preview[data-open] .example-pop {
+    transform: none;
+    transition: opacity 150ms ease-out;
+  }
 }
 
 .balloons {
@@ -237,7 +360,7 @@ html[data-intro] .balloon {
 /* Phones and small tablets */
 @media (max-width: 899px) {
   :root {
-    --logo-height: 8.526rem;
+    --logo-height: 11.084rem;
     --tagline-gap: 2.4rem;
     --tagline-height: 3.68rem;
   }
@@ -251,13 +374,17 @@ html[data-intro] .balloon {
   }
 
   .site-logo {
-    width: 20rem;
-    margin-left: -10rem;
+    width: 26rem;
+    margin-left: -13rem;
   }
 
   .tagline {
     width: 34rem;
     font-size: 1.6rem;
     line-height: 1.15;
+  }
+
+  .example-preview {
+    --w: 16rem;
   }
 }
