@@ -3,11 +3,16 @@ import { BalloonWorld, type Body } from "../lib/balloons";
 import { balloons } from "../lib/companies";
 import { INTRO, introAssetsReady, isIntroPending, pop } from "../lib/intro";
 import type { Point } from "../data/content";
+import { ORBIT_EVENT } from "./Logo";
+import { onHoverOffSfx, onHoverSfx } from "../lib/sfx";
 
 const FIGMA_WIDTH = 1728;
 // The intro ring around the logo, as half-width and half-height in design px.
 const RING: Point = [420, 250];
 const PHONE_RING: Point = [185, 265];
+// Space between the content and the oval the balloons circle on, each side, in design px.
+const ORBIT_PADDING = { x: 220, y: 150 };
+const PHONE_ORBIT_PADDING = { x: 60, y: 130 };
 const RING_EDGE = 70; // space the ring keeps from the edges of the screen
 const RING_STAGGER = 0.88; // every other balloon sits this much closer to the logo
 const RING_LOGO_GAP = 6; // space a balloon keeps from the logo at the start
@@ -103,6 +108,8 @@ export function BalloonField({ heroRef, logoRef }: Props) {
     const balloonScale = () =>
       parseFloat(getComputedStyle(hero).getPropertyValue("--balloon-scale")) || 1;
 
+    const content = hero.querySelector<HTMLElement>(".hero-content");
+
     // The logo is fixed and shrinks on scroll, so the collider has to follow it.
     const syncLogo = () => {
       const unit = world.unit;
@@ -115,6 +122,18 @@ export function BalloonField({ heroRef, logoRef }: Props) {
         w: logoRect.width / unit,
         h,
         r: h * 0.3,
+      };
+      // The orbit circles the logo, buttons, and tagline as one block.
+      const contentRect = content?.getBoundingClientRect();
+      const top = logoRect.top;
+      const bottom = Math.max(logoRect.bottom, contentRect?.bottom ?? 0);
+      const left = Math.min(logoRect.left, contentRect?.left ?? Infinity);
+      const right = Math.max(logoRect.right, contentRect?.right ?? -Infinity);
+      world.content = {
+        x: (left - heroRect.left) / unit,
+        y: (top - heroRect.top) / unit,
+        w: (right - left) / unit,
+        h: (bottom - top) / unit,
       };
     };
 
@@ -135,6 +154,8 @@ export function BalloonField({ heroRef, logoRef }: Props) {
     measure();
     const scale = balloonScale();
     const phone = scale < 1;
+    // Clicking the logo sends the balloons circling the content.
+    world.orbitPadding = phone ? PHONE_ORBIT_PADDING : ORBIT_PADDING;
     const yScale = phone ? 0.6 : 1;
     balloons.forEach((def, i) => {
       const el = elements.current[i];
@@ -260,6 +281,13 @@ export function BalloonField({ heroRef, logoRef }: Props) {
       root.classList.remove("is-grabbing");
     };
 
+    const onOrbit = (e: Event) => {
+      const on = (e as CustomEvent<boolean>).detail;
+      if (on && !world.orbiting) world.startOrbit();
+      else if (!on) world.stopOrbit();
+    };
+    window.addEventListener(ORBIT_EVENT, onOrbit);
+
     window.addEventListener("pointermove", onMove);
     window.addEventListener("pointerup", onUp);
     window.addEventListener("pointercancel", onUp);
@@ -327,6 +355,7 @@ export function BalloonField({ heroRef, logoRef }: Props) {
       stop();
       visibility.disconnect();
       resizeObserver.disconnect();
+      window.removeEventListener(ORBIT_EVENT, onOrbit);
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("pointerup", onUp);
       window.removeEventListener("pointercancel", onUp);
@@ -344,6 +373,8 @@ export function BalloonField({ heroRef, logoRef }: Props) {
             elements.current[i] = el;
           }}
           className="balloon"
+          onPointerEnter={onHoverSfx}
+          onPointerLeave={onHoverOffSfx}
           style={{
             width: `calc(${def.w / 10}rem * var(--balloon-scale))`,
             height: `calc(${def.h / 10}rem * var(--balloon-scale))`,

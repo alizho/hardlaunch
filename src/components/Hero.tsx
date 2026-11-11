@@ -1,5 +1,6 @@
 import { useRef, type RefObject } from "react";
 import { BalloonField } from "./BalloonField";
+import { Socials } from "./Socials";
 import { Tagline } from "./Tagline";
 
 export function Hero({ logoRef }: { logoRef: RefObject<HTMLElement | null> }) {
@@ -9,7 +10,10 @@ export function Hero({ logoRef }: { logoRef: RefObject<HTMLElement | null> }) {
     <section id="top" className="hero" ref={heroRef}>
       <div className="hero-bg" aria-hidden="true" />
       <div className="hero-white" aria-hidden="true" />
-      <Tagline />
+      <div className="hero-content">
+        <Socials />
+        <Tagline />
+      </div>
       <BalloonField heroRef={heroRef} logoRef={logoRef} />
     </section>
   );

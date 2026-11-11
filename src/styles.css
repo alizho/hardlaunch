@@ -26,11 +26,15 @@
 :root {
   --blue: #00aeff;
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
-  /* The logo and tagline are centered as one group. */
+  /* The logo, social buttons, and tagline are centered as one group. */
   --logo-height: 16.881rem;
-  --tagline-gap: 3.2rem;
-  --tagline-height: 4.167rem;
-  --group-height: calc(var(--logo-height) + var(--tagline-gap) + var(--tagline-height));
+  --logo-gap: 2.8rem; /* logo to buttons */
+  --social-size: 4rem;
+  --socials-gap: 2.4rem; /* buttons to tagline */
+  --tagline-height: 6.25rem; /* three lines */
+  --group-height: calc(
+    var(--logo-height) + var(--logo-gap) + var(--social-size) + var(--socials-gap) + var(--tagline-height)
+  );
 }
 
 *,
@@ -168,18 +172,31 @@ html.custom-cursor * {
   position: absolute;
   z-index: -1;
   inset: 0;
-  /* Starts below the tagline, so the white text stays on the blue. */
-  background: linear-gradient(to bottom, rgba(255, 255, 255, 0) calc(50% + 14rem), #fff 100%);
+  /* Starts below the tagline, so the buttons and white text stay on the blue. */
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0) calc(50% + var(--group-height) / 2), #fff 100%);
   pointer-events: none;
   will-change: transform;
 }
 
-.tagline {
+/* Everything under the logo, stacked and centered. */
+.hero-content {
   position: absolute;
+  /* Above the balloons, so the example images aren't covered. */
+  z-index: 1;
   left: 50%;
-  top: calc(50% + var(--group-height) / 2 - var(--tagline-height));
-  width: 41rem;
+  top: calc(50% - var(--group-height) / 2 + var(--logo-height) + var(--logo-gap));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--socials-gap);
   transform: translateX(-50%);
+}
+
+.tagline {
+  position: relative;
+  width: 41rem;
+  height: var(--tagline-height);
+  margin: 0;
   font-weight: 500;
   font-size: 2.0835rem;
   letter-spacing: -0.02083rem;
@@ -187,8 +204,56 @@ html.custom-cursor * {
   text-align: center;
   color: #fff;
   text-shadow: 0 0.2604rem 0.612rem rgba(0, 0, 0, 0.2);
-  /* Above the balloons, so the example images aren't covered. */
-  z-index: 1;
+}
+
+/* Social buttons */
+.socials {
+  display: flex;
+  /* Gap and corners keep the Figma proportions at any button size. */
+  gap: calc(var(--social-size) * 0.49);
+}
+
+.social {
+  display: block;
+  width: var(--social-size);
+  height: var(--social-size);
+  border-radius: calc(var(--social-size) * 0.246);
+  perspective: calc(var(--social-size) * 4);
+  /* Parallax (see Socials.tsx): follows the cursor quickly while hovered,
+     then springs back to rest when it leaves. */
+  transform: translate(var(--tx, 0px), var(--ty, 0px));
+  transition: transform 600ms var(--ease-spring);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.social img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  transform: rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)) scale(var(--press, 1));
+  transition: transform 600ms var(--ease-spring);
+  -webkit-user-drag: none;
+}
+
+.social[data-tracking],
+.social[data-tracking] img {
+  transition: transform 140ms var(--ease-out);
+}
+
+.social:active {
+  --press: 0.94;
+}
+
+.social:focus-visible {
+  outline: 0.2rem solid #fff;
+  outline-offset: 0.3rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .social,
+  .social img {
+    transition: none;
+  }
 }
 
 /* Underlined tagline words that reveal an example image. */
@@ -348,7 +413,7 @@ html.custom-cursor * {
 }
 
 /* Page-load intro: see lib/intro.ts for the timeline. */
-html[data-intro="pending"] :is(.site-logo a, .hero-white, .tagline, .balloon img) {
+html[data-intro="pending"] :is(.site-logo a, .hero-white, .tagline, .social, .balloon img) {
   opacity: 0;
 }
 
@@ -361,8 +426,10 @@ html[data-intro] .balloon {
 @media (max-width: 899px) {
   :root {
     --logo-height: 11.084rem;
-    --tagline-gap: 2.4rem;
-    --tagline-height: 3.68rem;
+    --logo-gap: 2.2rem;
+    --social-size: 3.6rem;
+    --socials-gap: 2rem;
+    --tagline-height: 5.52rem; /* three lines */
   }
 
   html {

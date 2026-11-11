@@ -17,6 +17,10 @@ export const INTRO = {
   whiteDuration: 1500,
   // 3. Tagline. Starts just before the logo lands so the page never waits on it.
   tagline: 2450,
+  socials: 2300, // just under the logo, so they come in before the tagline
+  socialsStagger: 70,
+  socialsDuration: 760,
+  socialsBounceSwings: 2, // fewer, slower swings than the other pops
 
   // The bounce on every intro pop.
   bounceSwings: 3.2, // frequency: half-swings per pop. Lower is fewer, slower swings.
@@ -25,9 +29,9 @@ export const INTRO = {
 };
 
 // Sampled into a CSS linear() curve, since a spring can't be written as a bezier.
-function buildBounceEasing() {
+function buildBounceEasing(bounceSwings: number = INTRO.bounceSwings) {
   if (!CSS.supports("transition-timing-function", "linear(0, 1)")) return "cubic-bezier(0.51, 0.01, 0.17, 0.94)";
-  const { bounceSwings, bounceDecay, bounceOvershoot } = INTRO;
+  const { bounceDecay, bounceOvershoot } = INTRO;
   const SAMPLES = 60;
   const frequency = bounceSwings * Math.PI;
   const falloff = Math.log(1 / bounceOvershoot) / (Math.PI / frequency) ** bounceDecay;
@@ -46,6 +50,7 @@ function buildBounceEasing() {
 }
 
 const BOUNCE_EASING = buildBounceEasing();
+const SOCIALS_EASING = buildBounceEasing(INTRO.socialsBounceSwings);
 const LIFT_EASING = "cubic-bezier(0.45, 0, 0.2, 1)";
 // Out-circ: quick off the mark, then a long, soft settle.
 const WHITE_EASING = "cubic-bezier(0, 0.55, 0.45, 1)";
@@ -79,14 +84,14 @@ export function introAssetsReady() {
 // Uses the individual `scale` property so it never fights a `transform` that
 // layout, scroll, or physics already owns on the same element. Opacity finishes
 // halfway along the curve so the bounce's dips below 1 never make it flicker.
-export function pop(el: Element, delay: number, from: number, duration = 640) {
+export function pop(el: Element, delay: number, from: number, duration = 640, easing = BOUNCE_EASING) {
   return el.animate(
     [
       { opacity: 0, scale: from },
       { opacity: 1, scale: (from + 1) / 2, offset: 0.5 },
       { opacity: 1, scale: 1 },
     ],
-    { delay, duration, easing: BOUNCE_EASING, fill: "backwards" },
+    { delay, duration, easing, fill: "backwards" },
   );
 }
 
@@ -132,6 +137,11 @@ export function playIntro() {
         ),
       );
     }
+
+    // The social buttons pop in under the logo, ahead of the tagline.
+    find(".social").forEach((button, i) => {
+      running.push(pop(button, INTRO.socials + i * INTRO.socialsStagger, 0.6, INTRO.socialsDuration, SOCIALS_EASING));
+    });
 
     root.dataset.intro = "playing";
     revealTimer = window.setTimeout(() => {
