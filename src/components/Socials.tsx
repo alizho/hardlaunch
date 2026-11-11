@@ -4,10 +4,11 @@ import linkedinIcon from "../assets/socials/linkedin.svg";
 import mailIcon from "../assets/socials/mail.svg";
 import { onHoverOffSfx, onHoverSfx } from "../lib/sfx";
 
+// `w` and `h` are each icon's shown size in Figma px; `h` keeps the SVG's own proportions.
 const socials = [
-  { name: "X", label: "Hard Launch on X", href: "https://x.com/hardlaunching", icon: xIcon, w: 36},
-  { name: "LinkedIn", label: "Hard Launch on LinkedIn", href: "https://www.linkedin.com/company/hardlaunching", icon: linkedinIcon, w: 36},
-  { name: "Email", label: "Email Jacky@hardlaunchcompany.com", href: "mailto:Jacky@hardlaunchcompany.com", icon: mailIcon, w: 36},
+  { name: "X", label: "Hard Launch on X", href: "https://x.com/hardlaunching", icon: xIcon, w: 36, h: 33.88 },
+  { name: "LinkedIn", label: "Hard Launch on LinkedIn", href: "https://www.linkedin.com/company/hardlaunching", icon: linkedinIcon, w: 36, h: 36 },
+  { name: "Email", label: "Email Jacky@hardlaunchcompany.com", href: "mailto:Jacky@hardlaunchcompany.com", icon: mailIcon, w: 36, h: 31.35 },
 ];
 
 // Hover parallax: the button drifts toward the cursor and tilts to face it.
@@ -44,7 +45,7 @@ export function settle(e: PointerEvent<HTMLElement>) {
 export function Socials() {
   return (
     <nav className="socials" aria-label="Hard Launch on social media">
-      {socials.map(({ name, label, href, icon, w }) => {
+      {socials.map(({ name, label, href, icon, w, h }) => {
         const external = href.startsWith("http");
         return (
         <a
@@ -54,7 +55,7 @@ export function Socials() {
           target={external ? "_blank" : undefined}
           rel={external ? "noopener noreferrer" : undefined}
           aria-label={label}
-          style={{ "--w": w } as CSSProperties}
+          style={{ "--w": w, "--h": h } as CSSProperties}
           onPointerEnter={onHoverSfx}
           onPointerMove={track}
           onPointerLeave={settle}

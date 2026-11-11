@@ -22,6 +22,8 @@
 :root {
   --blue: #00aeff;
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  /* How much larger than shown the filtered SVG art is drawn (see .site-logo img). */
+  --oversample: 3;
   /* The logo, social buttons, and tagline are centered as one group. */
   --logo-height: 16.881rem;
   --logo-gap: 2.8rem; /* logo to buttons */
@@ -43,14 +45,15 @@
 
 html {
   font-size: min(calc(100vw / 172.8), 13px);
-  background: #fff;
+  /* Blue, not white, so phone browsers tint their bars to match the hero. */
+  background: var(--blue);
   overflow-x: clip;
   overscroll-behavior: none;
 }
 
 body {
   margin: 0;
-  background: #fff;
+  background: var(--blue);
   color: var(--blue);
   font-family: "Intern", system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
@@ -142,11 +145,27 @@ html.custom-cursor * {
   margin-left: -19.8rem;
 }
 
-.site-logo a,
-.site-logo img {
+.site-logo a {
+  position: relative;
   display: block;
   width: 100%;
   height: 100%;
+}
+
+/* Safari draws the filters inside an SVG image at one pixel per CSS pixel, which
+   looks soft on dense screens. So the filtered art is laid out --oversample
+   times larger, centered on its box, and scaled back down to its real size. */
+.site-logo img,
+.social img,
+.balloon img {
+  position: absolute;
+  left: calc((1 - var(--oversample)) * 50%);
+  top: calc((1 - var(--oversample)) * 50%);
+  display: block;
+  width: calc(var(--oversample) * 100%);
+  height: calc(var(--oversample) * 100%);
+  max-width: none;
+  transform: scale(calc(1 / var(--oversample)));
 }
 
 /* Hero */
@@ -213,6 +232,7 @@ html.custom-cursor * {
 }
 
 .social {
+  position: relative;
   display: block;
   /* Each icon keeps its Figma size (--w and --h are set in Socials.tsx). */
   width: calc(var(--social-unit) * var(--w));
@@ -227,10 +247,7 @@ html.custom-cursor * {
 }
 
 .social img {
-  display: block;
-  width: 100%;
-  height: 100%;
-  transform: rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)) scale(var(--press, 1));
+  transform: rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)) scale(calc(var(--press, 1) / var(--oversample)));
   transition: transform 600ms var(--ease-spring);
   -webkit-user-drag: none;
 }
@@ -271,8 +288,6 @@ html.custom-cursor * {
 }
 
 .sound-toggle .sound-icon {
-  position: absolute;
-  inset: 0;
   opacity: 0;
   scale: 0.6;
   transition:
@@ -445,13 +460,8 @@ html.custom-cursor * {
 }
 
 .balloon img {
-  --shadow: calc(0.157rem * var(--balloon-scale));
-  position: absolute;
-  inset: 0;
-  display: block;
-  width: 100%;
-  height: 100%;
-  max-width: none;
+  /* Drawn before the image is scaled back down, so it's oversampled too. */
+  --shadow: calc(0.157rem * var(--balloon-scale) * var(--oversample));
   filter: drop-shadow(0 var(--shadow) var(--shadow) rgb(0 0 0 / 0.25));
   -webkit-user-drag: none;
 }
