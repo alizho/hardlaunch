@@ -1,13 +1,13 @@
-import type { PointerEvent } from "react";
+import type { CSSProperties, PointerEvent } from "react";
 import xIcon from "../assets/socials/x.svg";
 import linkedinIcon from "../assets/socials/linkedin.svg";
 import mailIcon from "../assets/socials/mail.svg";
 import { onHoverOffSfx, onHoverSfx } from "../lib/sfx";
 
 const socials = [
-  { name: "X", label: "Hard Launch on X", href: "https://x.com/hardlaunching", icon: xIcon },
-  { name: "LinkedIn", label: "Hard Launch on LinkedIn", href: "https://www.linkedin.com/company/hardlaunching", icon: linkedinIcon },
-  { name: "Email", label: "Email Jacky@hardlaunchcompany.com", href: "mailto:Jacky@hardlaunchcompany.com", icon: mailIcon },
+  { name: "X", label: "Hard Launch on X", href: "https://x.com/hardlaunching", icon: xIcon, w: 36},
+  { name: "LinkedIn", label: "Hard Launch on LinkedIn", href: "https://www.linkedin.com/company/hardlaunching", icon: linkedinIcon, w: 36},
+  { name: "Email", label: "Email Jacky@hardlaunchcompany.com", href: "mailto:Jacky@hardlaunchcompany.com", icon: mailIcon, w: 36},
 ];
 
 // Hover parallax: the button drifts toward the cursor and tilts to face it.
@@ -16,7 +16,7 @@ const TILT = 14; // most it tilts, in degrees
 
 const reducedMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-function track(e: PointerEvent<HTMLAnchorElement>) {
+export function track(e: PointerEvent<HTMLElement>) {
   if (e.pointerType !== "mouse" || reducedMotion()) return;
   const el = e.currentTarget;
   // Measured from the offset parent and offsets, which ignore the button's
@@ -34,7 +34,7 @@ function track(e: PointerEvent<HTMLAnchorElement>) {
   el.style.setProperty("--ry", `${nx * TILT}deg`);
 }
 
-function settle(e: PointerEvent<HTMLAnchorElement>) {
+export function settle(e: PointerEvent<HTMLElement>) {
   onHoverOffSfx(e);
   const el = e.currentTarget;
   delete el.dataset.tracking;
@@ -44,7 +44,7 @@ function settle(e: PointerEvent<HTMLAnchorElement>) {
 export function Socials() {
   return (
     <nav className="socials" aria-label="Hard Launch on social media">
-      {socials.map(({ name, label, href, icon }) => {
+      {socials.map(({ name, label, href, icon, w, h }) => {
         const external = href.startsWith("http");
         return (
         <a
@@ -54,6 +54,7 @@ export function Socials() {
           target={external ? "_blank" : undefined}
           rel={external ? "noopener noreferrer" : undefined}
           aria-label={label}
+          style={{ "--w": w, "--h": h } as CSSProperties}
           onPointerEnter={onHoverSfx}
           onPointerMove={track}
           onPointerLeave={settle}

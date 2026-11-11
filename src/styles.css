@@ -1,15 +1,11 @@
 /* 1rem = 10 design px at the 1728-wide Figma frame. */
 
+/* Intern variable font: one file covers every weight and optical size. */
 @font-face {
-  font-family: "Open Runde";
-  src: url("/fonts/OpenRunde-Regular.otf") format("opentype");
-  font-weight: 400;
-  font-display: swap;
-}
-@font-face {
-  font-family: "Open Runde";
-  src: url("/fonts/OpenRunde-Medium.otf") format("opentype");
-  font-weight: 500;
+  font-family: "Intern";
+  src: url("/fonts/Intern%5Bopsz,wght%5D.woff2") format("woff2-variations"),
+    url("/fonts/Intern%5Bopsz,wght%5D.woff2") format("woff2");
+  font-weight: 100 900;
   font-display: swap;
 }
 
@@ -29,7 +25,9 @@
   /* The logo, social buttons, and tagline are centered as one group. */
   --logo-height: 16.881rem;
   --logo-gap: 2.8rem; /* logo to buttons */
-  --social-size: 4rem;
+  /* One Figma px of the social icons. The old 49px buttons showed at 4rem. */
+  --social-unit: calc(4rem / 49);
+  --social-size: calc(var(--social-unit) * 32); /* tallest icon */
   --socials-gap: 2.4rem; /* buttons to tagline */
   --tagline-height: 6.25rem; /* three lines */
   --group-height: calc(
@@ -54,7 +52,7 @@ body {
   margin: 0;
   background: #fff;
   color: var(--blue);
-  font-family: "Open Runde", system-ui, sans-serif;
+  font-family: "Intern", system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   overflow-x: clip;
   overscroll-behavior: none;
@@ -209,15 +207,17 @@ html.custom-cursor * {
 /* Social buttons */
 .socials {
   display: flex;
-  /* Gap and corners keep the Figma proportions at any button size. */
-  gap: calc(var(--social-size) * 0.49);
+  align-items: center;
+  /* Same edge-to-edge spacing the old buttons had, at any size. */
+  gap: calc(var(--social-unit) * 24);
 }
 
 .social {
   display: block;
-  width: var(--social-size);
-  height: var(--social-size);
-  border-radius: calc(var(--social-size) * 0.246);
+  /* Each icon keeps its Figma size (--w and --h are set in Socials.tsx). */
+  width: calc(var(--social-unit) * var(--w));
+  height: calc(var(--social-unit) * var(--h));
+  border-radius: calc(var(--social-unit) * 7);
   perspective: calc(var(--social-size) * 4);
   /* Parallax (see Socials.tsx): follows the cursor quickly while hovered,
      then springs back to rest when it leaves. */
@@ -252,6 +252,50 @@ html.custom-cursor * {
 @media (prefers-reduced-motion: reduce) {
   .social,
   .social img {
+    transition: none;
+  }
+}
+
+/* Sound toggle, top right. Its two icons stack; the active one springs in. */
+.sound-toggle {
+  position: absolute;
+  top: 2.4rem;
+  right: 2.4rem;
+  z-index: 2;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.sound-toggle .sound-icon {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  scale: 0.6;
+  transition:
+    opacity 200ms var(--ease-out),
+    scale 520ms var(--ease-spring),
+    transform 600ms var(--ease-spring);
+}
+
+.sound-toggle .sound-icon.is-active {
+  opacity: 1;
+  scale: 1;
+}
+
+/* While the cursor is tracked, keep the quick tilt but still let the swap spring. */
+.sound-toggle[data-tracking] .sound-icon {
+  transition:
+    opacity 200ms var(--ease-out),
+    scale 520ms var(--ease-spring),
+    transform 140ms var(--ease-out);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sound-toggle .sound-icon {
     transition: none;
   }
 }
@@ -427,7 +471,7 @@ html[data-intro] .balloon {
   :root {
     --logo-height: 11.084rem;
     --logo-gap: 2.2rem;
-    --social-size: 3.6rem;
+    --social-unit: calc(3.6rem / 49);
     --socials-gap: 2rem;
     --tagline-height: 5.52rem; /* three lines */
   }

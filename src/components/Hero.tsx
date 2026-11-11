@@ -1,5 +1,6 @@
 import { useRef, type RefObject } from "react";
 import { BalloonField } from "./BalloonField";
+import { SoundToggle } from "./SoundToggle";
 import { Socials } from "./Socials";
 import { Tagline } from "./Tagline";
 
@@ -14,6 +15,7 @@ export function Hero({ logoRef }: { logoRef: RefObject<HTMLElement | null> }) {
         <Socials />
         <Tagline />
       </div>
+      <SoundToggle />
       <BalloonField heroRef={heroRef} logoRef={logoRef} />
     </section>
   );

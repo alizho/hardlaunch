@@ -61,8 +61,14 @@ if (typeof window !== "undefined") {
 
 const vary = (base: number, amount: number) => base * (1 + (Math.random() * 2 - 1) * amount);
 
+// The sound toggle (top right) flips this. Off silences every sfx.
+let soundOn = true;
+export function setSoundOn(on: boolean) {
+  soundOn = on;
+}
+
 function play(s: SfxSettings) {
-  if (!ctx || !buffer || ctx.state !== "running") return;
+  if (!soundOn || !ctx || !buffer || ctx.state !== "running") return;
   const now = performance.now();
   if (now - (lastPlay.get(s) ?? -Infinity) < s.minInterval) return;
   lastPlay.set(s, now);
