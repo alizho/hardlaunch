@@ -44,7 +44,7 @@ export function settle(e: PointerEvent<HTMLElement>) {
 export function Socials() {
   return (
     <nav className="socials" aria-label="Hard Launch on social media">
-      {socials.map(({ name, label, href, icon, w, h }) => {
+      {socials.map(({ name, label, href, icon, w }) => {
         const external = href.startsWith("http");
         return (
         <a
@@ -54,7 +54,7 @@ export function Socials() {
           target={external ? "_blank" : undefined}
           rel={external ? "noopener noreferrer" : undefined}
           aria-label={label}
-          style={{ "--w": w, "--h": h } as CSSProperties}
+          style={{ "--w": w } as CSSProperties}
           onPointerEnter={onHoverSfx}
           onPointerMove={track}
           onPointerLeave={settle}
