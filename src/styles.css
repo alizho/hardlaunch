@@ -9,6 +9,14 @@
   font-display: swap;
 }
 
+/* Mono, for the directory's header pills. */
+@font-face {
+  font-family: "Repro Mono";
+  src: url("/fonts/ABCReproMono-Regular.otf") format("opentype");
+  font-weight: 400;
+  font-display: swap;
+}
+
 :root {
   --ease-spring: cubic-bezier(0.34, 1.4, 0.64, 1);
 }
@@ -512,6 +520,131 @@ html[data-intro] .balloon {
   pointer-events: none;
 }
 
+/* Directory */
+.launches {
+  position: relative;
+  background: #fff;
+  padding-top: 16rem;
+  padding-bottom: 14rem;
+}
+
+/* Fades in the first time it's scrolled into view (see Launches.tsx). */
+.launches-table {
+  width: 111.4rem;
+  margin: 0 auto;
+  opacity: 0;
+  transform: translateY(1.6rem);
+  transition: opacity 700ms ease-out, transform 900ms var(--ease-out);
+  font-family: "Repro Mono", ui-monospace, monospace;
+}
+
+.launches[data-visible="true"] .launches-table {
+  opacity: 1;
+  transform: none;
+}
+
+.launches-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.launches-header-left {
+  display: flex;
+  align-items: center;
+  gap: 3.6385rem;
+}
+
+.header-tag {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  overflow: clip;
+  padding: 0.5881rem 0.8402rem;
+  border-radius: 0.8402rem;
+  background: #fff;
+  color: #00afff;
+  font-family: "Repro Mono", ui-monospace, monospace;
+  font-weight: 400;
+  font-size: 1.6072rem;
+  letter-spacing: -0.01607rem;
+  line-height: 1;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.header-tag::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow:
+    inset -0.6341rem 0.6737rem 1.1136rem 0 rgba(255, 255, 255, 0.74),
+    inset 0 0.1585rem 0.1585rem 0 rgba(0, 0, 0, 0.25),
+    inset 0 -0.084rem 0.6103rem 0 rgba(0, 0, 0, 0.25);
+  pointer-events: none;
+}
+
+.launch-list {
+  margin: 1.7624rem 0 0;
+  padding: 0;
+  list-style: none;
+  overflow-anchor: none;
+}
+
+/* The vertical padding fills the gaps between rows, so the click area is continuous. */
+.launch-head {
+  color: inherit;
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+  position: relative;
+  width: 100%;
+  padding-top: 1.7624rem;
+  padding-bottom: 1.7624rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-left: 9.654rem;
+  min-height: 2.9rem;
+  font-size: 1.4634rem;
+  letter-spacing: -0.01463rem;
+  line-height: 1;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.launch-head:focus-visible {
+  outline: 0.2rem solid var(--blue);
+  outline-offset: 0.4rem;
+  border-radius: 0.4rem;
+}
+
+.launch-logo {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.launch-logo img {
+  position: absolute;
+  display: block;
+  max-width: none;
+  -webkit-user-drag: none;
+}
+
+.launch-year {
+  color: var(--blue);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .launches-table {
+    transform: none;
+    transition: opacity 200ms ease-out;
+  }
+}
+
 /* Phones and small tablets */
 @media (max-width: 899px) {
   :root {
@@ -543,5 +676,26 @@ html[data-intro] .balloon {
 
   .example-preview {
     --w: 16rem;
+  }
+
+  .launches {
+    padding: 8rem 1.6rem 10rem;
+  }
+
+  .launches-table {
+    width: 100%;
+  }
+
+  .launches-header-left {
+    gap: 1.2rem;
+  }
+
+  .header-tag {
+    font-size: 1.2rem;
+  }
+
+  .launch-head {
+    padding-left: 5.8rem;
+    font-size: 1.3rem;
   }
 }

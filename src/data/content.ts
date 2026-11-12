@@ -1,14 +1,18 @@
-// Every company in the intro. To add one:
+// Every company on the site, in directory order. To add one:
 //   1. Export its logo from Figma as an SVG and save it as
 //      src/assets/logos/<id>.svg (e.g. "acme" -> acme.svg).
 //   2. Add a line here with id, name, year, and color.
-// It then appears in the intro. Balloon size comes from the
+// It then appears in the directory and the intro. Balloon size comes from the
 // SVG; anything exported far outside 60-120 wide is rescaled to fit.
 //
 // Everything else is optional, and worked out when left out:
-//   link: opened in a new tab when the balloon is clicked (not dragged)
+//   link: opened in a new tab when the balloon (not dragged) or directory row is clicked
 //   home: top-left of the balloon in the header, on the 1728-wide Figma frame
 //   scatter / scatterPhone: which part of the even ring around the logo it takes
+//   directoryWidth: width of the logo in the directory row
+//
+// To use different art in the directory, add src/assets/logos/<id>.directory.svg
+// at the size it should appear (about 30 wide).
 export type Point = [number, number];
 
 export type Company = {
@@ -20,10 +24,11 @@ export type Company = {
   home?: Point;
   scatter?: Point;
   scatterPhone?: Point;
+  directoryWidth?: number;
 };
 
 export const companies: Company[] = [
-  { id: "ghost", name: "Ghost", year: "2026", color: "#757575", link: "https://x.com/zainmfj/status/2107146556176798081", home: [439.09, 0], scatter: [-255, -240], scatterPhone: [-65, -265] },
+  { id: "ghost", name: "Ghost", year: "2026", color: "#757575", directoryWidth: 27.821, link: "https://x.com/zainmfj/status/2107146556176798081", home: [439.09, 0], scatter: [-255, -240], scatterPhone: [-65, -265] },
   { id: "tomo", name: "Tomo", year: "2026", color: "#aba800", link: "https://x.com/justoutquan/status/2070175262973862077", home: [514.13, 9.81], scatter: [-120, -175], scatterPhone: [-20, -135] },
   { id: "eigen", name: "Eigen", year: "2026", color: "#7ca600", link: "https://x.com/paulscherer/status/2044812094953164914", home: [1160.1, 7.53], scatter: [95, -230], scatterPhone: [55, -250] },
   { id: "omen", name: "Omen", year: "2026", color: "#ff8400", link: "https://x.com/FounderLaberge/status/2071630096545575317", home: [353.53, 56.92], scatter: [-255, -105], scatterPhone: [-172, -75] },
