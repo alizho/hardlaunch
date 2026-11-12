@@ -177,7 +177,7 @@ html.custom-cursor * {
   overflow: clip;
 }
 
-/* Stacking, back to front: blue, balloons, white gradient, content. */
+/* Stacking, back to front: blue, balloons, white clouds, content. */
 .hero-bg {
   position: absolute;
   z-index: -3;
@@ -193,6 +193,25 @@ html.custom-cursor * {
   background: linear-gradient(to bottom, rgba(255, 255, 255, 0) calc(50% + var(--group-height) / 2), #fff 100%);
   pointer-events: none;
   will-change: transform;
+}
+
+/* Once the cloud shader (Clouds.tsx) is drawing, it replaces the gradient. */
+.hero-white[data-shader] {
+  background: none;
+}
+
+/* Covers the same span the gradient fades over: tagline bottom to hero bottom. */
+.hero-clouds {
+  position: absolute;
+  left: 0;
+  top: calc(50% + var(--group-height) / 2);
+  display: none;
+  width: 100%;
+  height: calc(50% - var(--group-height) / 2);
+}
+
+.hero-white[data-shader] .hero-clouds {
+  display: block;
 }
 
 /* Everything under the logo, stacked and centered. */

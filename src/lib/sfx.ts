@@ -4,24 +4,24 @@
 import hoverUrl from "../assets/sfx/menu-hover-1.wav";
 
 export const HOVER_SFX = {
-  volume: 0.35, // 0–1, before randomization
-  basePlaybackRate: 2.8, // 1 = original pitch and speed; 2 = an octave up
-  pitchRandomization: 0.1, // each play's rate lands within ± this fraction of the base
+  volume: 0.25, // 0–1, before randomization
+  basePlaybackRate: 2.4, // 1 = original pitch and speed; 2 = an octave up
+  pitchRandomization: 0.3, // each play's rate lands within ± this fraction of the base
   volumeRandomization: 0.25, // each play's volume lands within ± this fraction of `volume`
   trebleCutDb: 0, // how much to turn down the highs, in dB (0 = no cut)
   trebleCutHz: 4000, // where the treble cut starts
-  minInterval: 40, // ms; hovers closer together than this are skipped
+  minInterval: 80, // ms; hovers closer together than this are skipped
 };
 
 // Played when the mouse moves off. Same knobs, tuned separately.
 export const HOVER_OFF_SFX = {
-  volume: 0.25,
-  basePlaybackRate: 2.5,
+  volume: 0.23,
+  basePlaybackRate: 2.2,
   pitchRandomization: 0.1,
   volumeRandomization: 0.25,
   trebleCutDb: 72,
   trebleCutHz: 4000,
-  minInterval: 40,
+  minInterval: 80,
 };
 
 type SfxSettings = typeof HOVER_SFX;
