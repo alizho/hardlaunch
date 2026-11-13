@@ -12,6 +12,7 @@ export function Hero({ logoRef }: { logoRef: RefObject<HTMLElement | null> }) {
     <section id="top" className="hero" ref={heroRef}>
       <div className="hero-bg" aria-hidden="true" />
       <Clouds />
+      <div className="riso-grain" aria-hidden="true" />
       <div className="hero-content">
         <Socials />
         <Tagline />

@@ -2,6 +2,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./App";
 import { prepareIntro } from "./lib/intro";
+import { initRiso } from "./lib/riso";
 import "./styles.css";
 
 // Temporary, for tracking down logos that vanish on iOS: `?off=blend,shadow`
@@ -11,6 +12,7 @@ for (const name of new URLSearchParams(location.search).get("off")?.match(/[a-z]
 }
 
 prepareIntro();
+initRiso();
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

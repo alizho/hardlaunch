@@ -3,6 +3,7 @@ import { Cursor } from "./components/Cursor";
 import { Hero } from "./components/Hero";
 import { Launches } from "./components/Launches";
 import { Logo } from "./components/Logo";
+import { RisoPanel } from "./components/RisoPanel";
 import { isIntroPending, playIntro } from "./lib/intro";
 
 export function App() {
@@ -19,6 +20,7 @@ export function App() {
         <Hero logoRef={logoRef} />
         <Launches />
       </main>
+      <RisoPanel />
       <Cursor />
     </>
   );
