@@ -68,7 +68,7 @@ const DURATION_SPREAD = 0.05; // balloons take up to this fraction longer or sho
 const REST_GAP = 6; // space between balloons when they settle at the top
 // Orbit: balloons circle the page content clockwise in a loose, layered halo.
 //
-// Every balloon starts moving the moment the logo is clicked, sweeping
+// Every balloon starts moving the moment the orbit starts, sweeping
 // clockwise round the content from wherever it is and spiralling in to its
 // place, so it joins the ring travelling along it, never backing up. Balloons
 // keep their order round the content; the ones furthest ahead (the rightmost,

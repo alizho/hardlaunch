@@ -3,7 +3,7 @@ import { BalloonWorld, type Body } from "../lib/balloons";
 import { balloons } from "../lib/companies";
 import { INTRO, introAssetsReady, isIntroPending, pop } from "../lib/intro";
 import type { Point } from "../data/content";
-import { BALLOON_DEFAULT, ORBIT_EVENT } from "./Logo";
+import { BALLOON_DEFAULT } from "./Logo";
 import { onHoverOffSfx, onHoverSfx } from "../lib/sfx";
 
 const FIGMA_WIDTH = 1728;
@@ -23,6 +23,9 @@ const PHONE_SCATTER_REACH: Point = [195, 300];
 const SCATTER_EDGE = 16; // space scattered balloons keep from the edges of the screen
 const SCATTER_LOGO_GAP = 60; // space scattered balloons keep from the logo
 const SCATTER_TRIES = 120;
+// Scrolling this far down, as a share of the screen's height, lets the balloons
+// go to float up. Scrolling back above it sets them circling again.
+const FLOAT_AFTER = 0.04;
 
 // Points spaced evenly by distance around an ellipse, starting half a step past
 // its right edge so the top and bottom halves get the same number.
@@ -150,7 +153,6 @@ export function BalloonField({ heroRef, logoRef }: Props) {
     measure();
     const scale = balloonScale();
     const phone = scale < 1;
-    // Clicking the logo sends the balloons circling the content.
     world.orbitPadding = phone ? PHONE_ORBIT_PADDING : ORBIT_PADDING;
     const yScale = phone ? 0.6 : 1;
     balloons.forEach((def, i) => {
@@ -256,13 +258,6 @@ export function BalloonField({ heroRef, logoRef }: Props) {
       root.classList.remove("is-grabbing");
     };
 
-    const onOrbit = (e: Event) => {
-      const on = (e as CustomEvent<boolean>).detail;
-      if (on && !world.orbiting) world.startOrbit();
-      else if (!on) world.stopOrbit();
-    };
-    window.addEventListener(ORBIT_EVENT, onOrbit);
-
     window.addEventListener("pointermove", onMove);
     window.addEventListener("pointerup", onUp);
     window.addEventListener("pointercancel", onUp);
@@ -302,8 +297,19 @@ export function BalloonField({ heroRef, logoRef }: Props) {
     });
     visibility.observe(hero);
 
-    // No intro to wait for (it only plays once per load), so start circling now.
-    if (!intro && BALLOON_DEFAULT === "orbit") world.startOrbit();
+    // The balloons circle while the page is at the top. Scrolling down lets
+    // them go, to float up as the hero leaves, and scrolling back to the top
+    // gathers them into the ring again.
+    const syncToScroll = () => {
+      if (holding || BALLOON_DEFAULT !== "orbit") return;
+      const away = window.scrollY > window.innerHeight * FLOAT_AFTER;
+      if (away && world.orbiting) world.stopOrbit();
+      else if (!away && !world.orbiting) world.startOrbit();
+    };
+    window.addEventListener("scroll", syncToScroll, { passive: true });
+
+    // No intro to wait for (it only plays once per load), so start now.
+    syncToScroll();
 
     let cancelled = false;
     let releaseTimer = 0;
@@ -319,7 +325,7 @@ export function BalloonField({ heroRef, logoRef }: Props) {
           holding = false;
           if (BALLOON_DEFAULT === "orbit") {
             // They swing out from where they are into the ring around the content.
-            world.startOrbit();
+            syncToScroll();
           } else {
             // They all leave together and float straight up from where they are.
             const spots = world.settleStraightUp();
@@ -340,7 +346,7 @@ export function BalloonField({ heroRef, logoRef }: Props) {
       stop();
       visibility.disconnect();
       resizeObserver.disconnect();
-      window.removeEventListener(ORBIT_EVENT, onOrbit);
+      window.removeEventListener("scroll", syncToScroll);
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("pointerup", onUp);
       window.removeEventListener("pointercancel", onUp);

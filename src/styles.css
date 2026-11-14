@@ -864,10 +864,15 @@ html.intro-lock body {
 }
 
 /* Directory */
+/* The directory starts --peek above the bottom of the hero, so the top of its
+   first row shows through the clouds on the first screen: the
+   cue that there's more below. That overlap is see-through; the hero is solid
+   white along its bottom edge, so the two meet without a seam. */
 .launches {
+  --peek: 6.4rem;
   position: relative;
-  background: #fff;
-  padding-top: 16rem;
+  margin-top: calc(var(--peek) * -1);
+  background: linear-gradient(to bottom, transparent var(--peek), #fff 0);
   /* The footer's clouds start solid white, so they carry on the space below. */
   padding-bottom: 4rem;
 }
@@ -878,13 +883,9 @@ html.intro-lock body {
   font-family: "Repro Mono", ui-monospace, monospace;
 }
 
-/* The entrance (see Launches.tsx): the header pills pop in when they scroll
-   into view, and each row fades in as it does, starting blurred and a little
-   low. Rows that arrive together go one after another: --delay is set per row. */
-.launches-header:not([data-shown]) .header-tag {
-  opacity: 0;
-}
-
+/* The entrance (see Launches.tsx): each row fades in as it scrolls into view,
+   starting blurred and a little low. Rows that arrive together go one after
+   another: --delay is set per row. */
 .launch-row {
   --fade: 900ms; /* how long each row takes to come in */
   transition:
@@ -899,52 +900,9 @@ html.intro-lock body {
   filter: blur(0.8rem);
 }
 
-.launches-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.launches-header-left {
-  display: flex;
-  align-items: center;
-  gap: 3.6385rem;
-}
-
-.header-tag {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  overflow: clip;
-  padding: 0.5881rem 0.8402rem;
-  border-radius: 0.8402rem;
-  background: #fff;
-  color: #00afff;
-  font-family: "Repro Mono", ui-monospace, monospace;
-  font-weight: 400;
-  font-size: 1.6072rem;
-  letter-spacing: -0.01607rem;
-  line-height: 1;
-  text-transform: uppercase;
-  white-space: nowrap;
-}
-
-.header-tag::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  box-shadow:
-    inset -0.6341rem 0.6737rem 1.1136rem 0 rgba(255, 255, 255, 0.74),
-    inset 0 0.1585rem 0.1585rem 0 rgba(0, 0, 0, 0.25),
-    inset 0 -0.084rem 0.6103rem 0 rgba(0, 0, 0, 0.25);
-  pointer-events: none;
-}
-
 .launch-list {
   position: relative;
-  margin: 1.7624rem 0 0;
+  margin: 0;
   padding: 0;
   list-style: none;
   overflow-anchor: none;
@@ -1222,7 +1180,8 @@ html.intro-lock body {
   }
 
   .launches {
-    padding: 8rem 1.6rem 3rem;
+    --peek: 5.9rem;
+    padding: 0 1.6rem 3rem;
   }
 
   .site-footer {
@@ -1245,14 +1204,6 @@ html.intro-lock body {
 
   .launches-table {
     width: 100%;
-  }
-
-  .launches-header-left {
-    gap: 1.2rem;
-  }
-
-  .header-tag {
-    font-size: 1.2rem;
   }
 
   .launch-head {

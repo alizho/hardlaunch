@@ -1,7 +1,6 @@
 import { useEffect, useRef, type RefObject } from "react";
 import { BalloonField } from "./BalloonField";
 import { Clouds } from "./Clouds";
-import { ScrollArrow } from "./ScrollArrow";
 import { Socials } from "./Socials";
 import { Tagline } from "./Tagline";
 
@@ -86,7 +85,6 @@ export function Hero({ logoRef }: { logoRef: RefObject<HTMLElement | null> }) {
         <Socials />
         <Tagline />
       </div>
-      <ScrollArrow />
       <BalloonField heroRef={heroRef} logoRef={logoRef} />
     </section>
   );

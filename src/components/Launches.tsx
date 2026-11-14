@@ -1,6 +1,5 @@
 import { useEffect, useRef, type PointerEvent } from "react";
 import { launches, type Launch } from "../lib/companies";
-import { popButton } from "../lib/intro";
 import { playRowHover, playRowHoverOff } from "../lib/sfx";
 
 // How the hovered row's outline moves between rows. Its top and bottom edges
@@ -19,9 +18,8 @@ const OUTLINE = {
   minHeight: 12, // px; the edges never get closer than this
 };
 
-// The directory's entrance. Staggers are in ms; how long each row's fade takes
+// The directory's entrance. The stagger is in ms; how long each row's fade takes
 // is --fade under .launch-row in styles.css.
-const PILL_STAGGER = 70;
 const ROW_STAGGER = 80; // between rows that scroll into view at the same time
 const REVEAL_INSET = 8; // % of the screen's height a row must clear before it shows
 
@@ -165,48 +163,50 @@ export function Launches() {
 
   useEffect(() => () => cancelAnimationFrame(motion.current.raf), []);
 
-  // The entrance. The header pills pop like the hero's buttons when they scroll
-  // into view, and each row fades in as it does (that part is in styles.css).
-  // Rows that come into view together are staggered from the top down.
+  // The entrance. Each row fades in as it scrolls into view (that part is in
+  // styles.css). Rows that come into view together are staggered from the top down.
+  // The first row peeks up into the hero (--peek in styles.css), so it comes
+  // in as soon as the intro has finished, as the cue to scroll.
   useEffect(() => {
     const el = section.current;
     if (!el) return;
-    const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const pops: Animation[] = [];
-    const observer = new IntersectionObserver(
-      (entries) => {
-        let arrived = 0;
-        for (const { target, isIntersecting } of entries) {
-          if (!isIntersecting || !(target instanceof HTMLElement)) continue;
-          observer.unobserve(target);
-          if (target.matches(".launch-row")) {
-            target.style.setProperty("--delay", `${arrived++ * ROW_STAGGER}ms`);
-          } else if (!reduced) {
-            target.querySelectorAll(".header-tag").forEach((pill, i) => pops.push(popButton(pill, i * PILL_STAGGER)));
-          }
-          target.dataset.shown = "";
-        }
-      },
-      // A row counts as in view once it's this far above the bottom of the screen.
-      { rootMargin: `0px 0px -${REVEAL_INSET}% 0px` },
-    );
-    el.querySelectorAll(".launches-header, .launch-row").forEach((item) => observer.observe(item));
+    const root = document.documentElement;
+    const reveal = (observer: IntersectionObserver) => (entries: IntersectionObserverEntry[]) => {
+      let arrived = 0;
+      for (const { target, isIntersecting } of entries) {
+        if (!isIntersecting || !(target instanceof HTMLElement)) continue;
+        observer.unobserve(target);
+        target.style.setProperty("--delay", `${arrived++ * ROW_STAGGER}ms`);
+        target.dataset.shown = "";
+      }
+    };
+    // The peeking one shows the moment any part of it is on screen. The rest
+    // wait until they're a little way up from the bottom of it.
+    const peeking: IntersectionObserver = new IntersectionObserver((entries) => reveal(peeking)(entries));
+    const rest: IntersectionObserver = new IntersectionObserver((entries) => reveal(rest)(entries), {
+      rootMargin: `0px 0px -${REVEAL_INSET}% 0px`,
+    });
+    const watch = () => {
+      el.querySelectorAll(".launch-row").forEach((item, i) => (i < 1 ? peeking : rest).observe(item));
+    };
+    // Nothing comes in while the intro is still playing over it.
+    const unlocked = new MutationObserver(() => {
+      if (root.classList.contains("intro-lock")) return;
+      unlocked.disconnect();
+      watch();
+    });
+    if (root.classList.contains("intro-lock")) unlocked.observe(root, { attributes: true, attributeFilter: ["class"] });
+    else watch();
     return () => {
-      observer.disconnect();
-      pops.forEach((animation) => animation.cancel());
+      unlocked.disconnect();
+      peeking.disconnect();
+      rest.disconnect();
     };
   }, []);
 
   return (
     <section id="launches" className="launches" ref={section}>
       <div className="launches-table">
-        <div className="launches-header">
-          <div className="launches-header-left">
-            <span className="header-tag">Logo</span>
-            <span className="header-tag">Company</span>
-          </div>
-          <span className="header-tag">Year launched</span>
-        </div>
         <ul className="launch-list" onPointerMove={trackPointer} onPointerLeave={leaveList}>
           {launches.map((launch) => (
             <Row key={launch.id} launch={launch} onEnter={enterRow} />
