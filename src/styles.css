@@ -1037,7 +1037,9 @@ html.intro-lock body {
   display: flex;
   align-items: flex-end;
   min-height: var(--footer-height);
-  background: var(--blue);
+  /* The top edge is white under the flipped cloud layer, so any sub-pixel gap
+     where the clouds meet the directory shows white, not a blue hairline. */
+  background: linear-gradient(#fff, #fff) top / 100% 2px no-repeat, var(--blue);
   overflow: clip;
 }
 
