@@ -37,6 +37,7 @@ export const companies: Company[] = [
   { id: "osmosis", name: "Osmosis", year: "2026", color: "#00ffcc", link: "https://www.linkedin.com/posts/kasey-zhang_were-excited-to-finally-launch-osmosis-activity-7384264333322584085-Su8T", home: [1336.92, 3.24], scatter: [285, -120], scatterPhone: [140, -140] },
   { id: "fulcrum", name: "Fulcrum", year: "2026", color: "#9000c0", link: "https://www.linkedin.com/feed/update/urn:li:activity:7421952680555728897/", home: [1550.31, 82.53], scatter: [370, 90], scatterPhone: [165, 125] },
   { id: "general-intelligence", name: "General Intelligence", year: "2026", color: "#CCA600", link: "https://www.x.com/ndrewpignanelli/status/1965452670128587033/" },
+  { id: "beacon", name: "Beacon", year: "2026", color: "#EA0C00", link: "https://www.beaconholdings.com/" },
   { id: "metis", name: "Metis", year: "2026", color: "#296d07", link: "https://www.linkedin.com/posts/aryan-shah1_today-we-are-welcoming-the-metis-team-to-activity-7440073534116331520-80H6", home: [150.98, 91.02], scatter: [-310, 105], scatterPhone: [-110, 125] },
   { id: "flora", name: "Flora", year: "2026", color: "#000000", link: "https://x.com/weberwongwong/status/1894794612398792974", home: [247.1, 0.02], scatter: [-425, 20], scatterPhone: [-183, 40] },
   { id: "andera", name: "Andera", year: "2026", color: "#000000", link: "https://www.linkedin.com/posts/aryo-patel_today-were-announcing-anderas-37m-series-ugcPost-7485003453094850560-yIbF/", home: [1646.36, 7.62], scatter: [150, 215], scatterPhone: [70, 240] },

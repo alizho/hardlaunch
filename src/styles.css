@@ -40,6 +40,18 @@
   --social-size: calc(var(--social-unit) * 32); /* tallest icon */
   --socials-gap: 2.4rem; /* buttons to tagline */
   --tagline-height: 6.25rem; /* three lines */
+  /* Scrolling shrinks the logo into the top of the screen: how far from the
+     top it ends, its size once there, and how much scrolling it takes. */
+  --logo-end: 2.4rem;
+  --logo-scale: 0.31;
+  --logo-distance: 30rem;
+  /* The hero's buttons and text fade out over this share of its height, and
+     blur up to this much by the time they're gone. The blur is only switched
+     on for mouse-driven screens (further down): on phones, redrawing it every
+     frame is too slow to keep up with scrolling. */
+  --hero-fade-over: 0.6;
+  --hero-fade-blur: 0px;
+  --hero-fade-animation: hero-fade;
   /* Scroll parallax: how far each one lags behind the page, as a share of the
      distance scrolled. 0 scrolls normally, 1 would stay put. */
   --parallax-socials: 0.26;
@@ -176,7 +188,7 @@ html.custom-cursor * {
   height: var(--logo-height);
   margin-left: -19.8rem;
   transform-origin: 50% 0;
-  will-change: translate, scale;
+  will-change: transform;
 }
 
 .site-logo a {
@@ -397,19 +409,86 @@ html[data-riso="assets"] :is(.site-logo img, .social img) {
   align-items: center;
   gap: var(--socials-gap);
   transform: translateX(-50%);
-  /* Fades and blurs as the hero scrolls away (see Hero.tsx). */
-  opacity: var(--scroll-fade, 1);
-  filter: var(--scroll-filter, none);
+  will-change: opacity;
 }
 
-/* Scroll parallax (see Hero.tsx): --scroll is how far the page has scrolled, in
-   px. The lower an element sits, the more it lags, so the group spreads apart. */
-.socials {
-  translate: 0 calc(var(--scroll, 0) * var(--parallax-socials) * 1px);
+/* Scroll-linked motion. These animations are driven by the page's scroll
+   position rather than by time, so the browser keeps them exactly in step with
+   scrolling, with no script in between. Browsers without scroll timelines get
+   the same motion from Logo.tsx and Hero.tsx instead. */
+@media (hover: hover) and (pointer: fine) {
+  :root {
+    --hero-fade-blur: 14px;
+    --hero-fade-animation: hero-fade-blur;
+  }
 }
 
-.tagline {
-  translate: 0 calc(var(--scroll, 0) * var(--parallax-tagline) * 1px);
+@supports (animation-timeline: scroll()) {
+  /* The logo shrinks into the top of the screen. */
+  .site-logo {
+    animation: logo-shrink ease-in-out both;
+    animation-timeline: scroll(root);
+    animation-range: 0 var(--logo-distance);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    /* The buttons and text fade (and blur, where that's switched on). */
+    .hero-content {
+      animation: var(--hero-fade-animation) linear both;
+      animation-timeline: scroll(root);
+      animation-range: 0 calc(var(--hero-fade-over) * 100svh);
+    }
+
+    /* The arrow keeps its bob as well. Not during the intro, which hides it. */
+    html:not(.intro-lock) .scroll-arrow {
+      animation:
+        scroll-arrow-bob 3.6s 1.5s infinite,
+        var(--hero-fade-animation) linear both;
+      animation-timeline: auto, scroll(root);
+      animation-range: normal, 0 calc(var(--hero-fade-over) * 100svh);
+    }
+
+    /* Parallax: the lower one lags more, so the group spreads apart. */
+    .socials,
+    .tagline {
+      animation: hero-lag linear both;
+      animation-timeline: scroll(root);
+      animation-range: 0 100svh;
+    }
+
+    .socials {
+      --lag: var(--parallax-socials);
+    }
+
+    .tagline {
+      --lag: var(--parallax-tagline);
+    }
+  }
+}
+
+@keyframes logo-shrink {
+  to {
+    transform: translateY(calc(var(--logo-end) - (50svh - var(--group-height) / 2))) scale(var(--logo-scale));
+  }
+}
+
+@keyframes hero-fade {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes hero-fade-blur {
+  to {
+    opacity: 0;
+    filter: blur(var(--hero-fade-blur));
+  }
+}
+
+@keyframes hero-lag {
+  to {
+    translate: 0 calc(100svh * var(--lag));
+  }
 }
 
 .tagline {
@@ -486,8 +565,6 @@ html[data-riso="assets"] :is(.site-logo img, .social img) {
   width: 3.1rem;
   height: 2.533rem; /* 93 x 76 art */
   margin-left: -1.55rem;
-  opacity: var(--scroll-fade, 1);
-  filter: var(--scroll-filter, none);
   perspective: 12rem;
   /* Hover parallax, shared with the social buttons (see Socials.tsx). The bob
      uses the separate `translate` property, so the two don't collide. */
@@ -1116,6 +1193,9 @@ html.intro-lock body {
     --social-unit: calc(3.6rem / 49);
     --socials-gap: 2rem;
     --tagline-height: 5.52rem; /* three lines */
+    --logo-end: 1.2rem;
+    --logo-scale: 0.43;
+    --logo-distance: 16rem;
   }
 
   html {
