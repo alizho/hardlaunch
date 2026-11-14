@@ -2,12 +2,13 @@ import { useEffect, useRef } from "react";
 
 type CursorState = "arrow" | "point" | "open" | "grab";
 
-// `x`/`y` is the hotspot inside each image, in px.
+// `width` is the size shown, and `x`/`y` the hotspot inside each image, in px.
+// Keep the hotspots the same as the ones in styles.css.
 const CURSORS: { state: CursorState; width: number; x: number; y: number }[] = [
-  { state: "arrow", width: 58, x: 13, y: 12 },
-  { state: "point", width: 47, x: 19, y: 2 },
-  { state: "open", width: 47, x: 23, y: 20 },
-  { state: "grab", width: 45, x: 22, y: 18 },
+  { state: "arrow", width: 39, x: 4, y: 4 },
+  { state: "point", width: 40, x: 16, y: 3 },
+  { state: "open", width: 39, x: 20, y: 24 },
+  { state: "grab", width: 37, x: 19, y: 22 },
 ];
 
 function stateFor(target: EventTarget | null): CursorState {

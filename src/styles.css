@@ -40,6 +40,10 @@
   --social-size: calc(var(--social-unit) * 32); /* tallest icon */
   --socials-gap: 2.4rem; /* buttons to tagline */
   --tagline-height: 6.25rem; /* three lines */
+  /* Scroll parallax: how far each one lags behind the page, as a share of the
+     distance scrolled. 0 scrolls normally, 1 would stay put. */
+  --parallax-socials: 0.26;
+  --parallax-tagline: 0.36;
   --group-height: calc(
     var(--logo-height) + var(--logo-gap) + var(--social-size) + var(--socials-gap) + var(--tagline-height)
   );
@@ -49,6 +53,23 @@
 *::before,
 *::after {
   box-sizing: border-box;
+}
+
+::selection {
+  background-color:  #ffffff; /* Highlight background */
+  color:var(--blue);            /* Highlighted text color */
+}
+
+/* Optional: Firefox compatibility for older versions */
+::-moz-selection {
+  background-color:  #ffffff;
+  color:var(--blue);
+}
+
+/* Applies only to specific elements */
+p.custom-highlight::selection {
+  background-color:  #ffffff;
+  color:var(--blue);
 }
 
 html {
@@ -75,28 +96,30 @@ p {
   padding: 0;
 }
 
-/* Custom cursors from Figma */
+/* Custom cursors. The PNGs are renders of the SVGs beside them in
+   public/assets/cursors (cursor, handpoint, handopen, handgrab), at 1x and 2x.
+   The two numbers after each image are its hotspot: the point that clicks. */
 html,
 body,
 [aria-disabled="true"] {
-  cursor: url("/assets/cursors/arrow.png") 13 12, auto;
-  cursor: -webkit-image-set(url("/assets/cursors/arrow.png") 1x, url("/assets/cursors/arrow@2x.png") 2x) 13 12, auto;
+  cursor: url("/assets/cursors/arrow.png") 4 4, auto;
+  cursor: -webkit-image-set(url("/assets/cursors/arrow.png") 1x, url("/assets/cursors/arrow@2x.png") 2x) 4 4, auto;
 }
 
 a {
-  cursor: url("/assets/cursors/point.png") 19 2, pointer;
-  cursor: -webkit-image-set(url("/assets/cursors/point.png") 1x, url("/assets/cursors/point@2x.png") 2x) 15 5, pointer;
+  cursor: url("/assets/cursors/point.png") 16 3, pointer;
+  cursor: -webkit-image-set(url("/assets/cursors/point.png") 1x, url("/assets/cursors/point@2x.png") 2x) 16 3, pointer;
 }
 
 .balloon {
-  cursor: url("/assets/cursors/open.png") 23 20, grab;
-  cursor: -webkit-image-set(url("/assets/cursors/open.png") 1x, url("/assets/cursors/open@2x.png") 2x) 23 20, grab;
+  cursor: url("/assets/cursors/open.png") 20 24, grab;
+  cursor: -webkit-image-set(url("/assets/cursors/open.png") 1x, url("/assets/cursors/open@2x.png") 2x) 20 24, grab;
 }
 
 html.is-grabbing,
 html.is-grabbing * {
-  cursor: url("/assets/cursors/grab.png") 22 18, grabbing !important;
-  cursor: -webkit-image-set(url("/assets/cursors/grab.png") 1x, url("/assets/cursors/grab@2x.png") 2x) 22 18, grabbing !important;
+  cursor: url("/assets/cursors/grab.png") 19 22, grabbing !important;
+  cursor: -webkit-image-set(url("/assets/cursors/grab.png") 1x, url("/assets/cursors/grab@2x.png") 2x) 19 22, grabbing !important;
 }
 
 html.is-grabbing {
@@ -142,15 +165,18 @@ html.custom-cursor * {
   transition: opacity 60ms ease, transform 340ms var(--ease-spring);
 }
 
-/* Logo */
+/* Logo. Fixed to the screen: it starts centered with the hero's content and
+   shrinks into the top as the page scrolls (see Logo.tsx). */
 .site-logo {
-  position: absolute;
+  position: fixed;
   z-index: 25;
   left: 50%;
   top: calc(50svh - var(--group-height) / 2);
   width: 39.6rem;
   height: var(--logo-height);
   margin-left: -19.8rem;
+  transform-origin: 50% 0;
+  will-change: translate, scale;
 }
 
 .site-logo a {
@@ -165,7 +191,10 @@ html.custom-cursor * {
    times larger, centered on its box, and scaled back down to its real size. */
 .site-logo img,
 .social img,
-.balloon img {
+.balloon img,
+.launch-logo img,
+.scroll-arrow img,
+.footer-mark img {
   position: absolute;
   left: calc((1 - var(--oversample)) * 50%);
   top: calc((1 - var(--oversample)) * 50%);
@@ -253,7 +282,7 @@ html[data-riso] .riso-grain {
 
 /* The logo and icons sit above that layer, so the same specks are cut out of
    them instead. The flat layer on top sets how many of the specks show. */
-html[data-riso] :is(.site-logo img, .social img) {
+html[data-riso="assets"] :is(.site-logo img, .social img) {
   --riso-solid: rgb(0 0 0 / var(--riso-asset-solid));
   -webkit-mask-image: linear-gradient(var(--riso-solid), var(--riso-solid)), var(--riso-ink-tile);
   mask-image: linear-gradient(var(--riso-solid), var(--riso-solid)), var(--riso-ink-tile);
@@ -368,6 +397,19 @@ html[data-riso] :is(.site-logo img, .social img) {
   align-items: center;
   gap: var(--socials-gap);
   transform: translateX(-50%);
+  /* Fades and blurs as the hero scrolls away (see Hero.tsx). */
+  opacity: var(--scroll-fade, 1);
+  filter: var(--scroll-filter, none);
+}
+
+/* Scroll parallax (see Hero.tsx): --scroll is how far the page has scrolled, in
+   px. The lower an element sits, the more it lags, so the group spreads apart. */
+.socials {
+  translate: 0 calc(var(--scroll, 0) * var(--parallax-socials) * 1px);
+}
+
+.tagline {
+  translate: 0 calc(var(--scroll, 0) * var(--parallax-tagline) * 1px);
 }
 
 .tagline {
@@ -434,12 +476,90 @@ html[data-riso] :is(.site-logo img, .social img) {
   }
 }
 
-/* Sound toggle, top right. Its two icons stack; the active one springs in. */
-.sound-toggle {
+/* Scroll arrow, bottom center of the hero (ScrollArrow.tsx). It appears once
+   the intro lets the page scroll, and fades with the rest as the hero leaves. */
+.scroll-arrow {
   position: absolute;
+  z-index: 2;
+  left: 50%;
+  bottom: 4.4rem;
+  width: 3.1rem;
+  height: 2.533rem; /* 93 x 76 art */
+  margin-left: -1.55rem;
+  opacity: var(--scroll-fade, 1);
+  filter: var(--scroll-filter, none);
+  perspective: 12rem;
+  /* Hover parallax, shared with the social buttons (see Socials.tsx). The bob
+     uses the separate `translate` property, so the two don't collide. */
+  transform: translate(var(--tx, 0px), var(--ty, 0px));
+  transition: transform 600ms var(--ease-spring);
+  animation: scroll-arrow-bob 3.6s 1.5s infinite;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.scroll-arrow[data-tracking] {
+  transition: transform 140ms var(--ease-out);
+}
+
+.scroll-arrow:active {
+  --press: 0.94;
+}
+
+/* Hidden until the intro unlocks the page, when it pops in like the social
+   buttons (see lib/intro.ts). */
+html.intro-lock .scroll-arrow {
+  opacity: 0;
+}
+
+.scroll-arrow img {
+  transform: rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)) scale(calc(var(--press, 1) / var(--oversample)));
+  transition: transform 600ms var(--ease-spring);
+  -webkit-user-drag: none;
+}
+
+.scroll-arrow[data-tracking] img {
+  transition: transform 140ms var(--ease-out);
+}
+
+.scroll-arrow:focus-visible {
+  outline: 0.2rem solid var(--blue);
+  outline-offset: 0.4rem;
+  border-radius: 0.4rem;
+}
+
+/* A tug: pulled down quickly, let go at once, and it springs back with a
+   little overshoot. Then still for the rest of the cycle. */
+@keyframes scroll-arrow-bob {
+    0% {
+    translate: 0 0;
+    animation-timing-function: cubic-bezier(0.5, 0, 0.8, 0.7);
+    }
+    8% {
+    translate: 0 0.5rem;
+    /* Slightly stronger overshoot, slower spring back */
+    animation-timing-function: cubic-bezier(0.3, 1.8, 0.5, 1);
+    }
+    35%,
+    100% {
+    translate: 0 0;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scroll-arrow,
+  .scroll-arrow img {
+    animation: none;
+    transition: none;
+  }
+}
+
+/* Sound toggle, fixed to the top right of the screen. Its two icons stack; the
+   active one springs in. */
+.sound-toggle {
+  position: fixed;
   top: 2.4rem;
   right: 2.4rem;
-  z-index: 2;
+  z-index: 25;
   padding: 0;
   border: 0;
   background: none;
@@ -550,21 +670,25 @@ html[data-riso] :is(.site-logo img, .social img) {
   border-radius: 0.8rem;
   box-shadow: 0 0.6rem 2rem rgba(0, 0, 0, 0.18);
   opacity: 0;
+  filter: blur(0.6rem);
   transform: translateY(-0.4rem) scale(0.95);
   transform-origin: 50% 0;
   /* Closing: quick, no bounce. */
   transition:
     opacity 140ms ease-out,
+    filter 140ms ease-out,
     transform 160ms ease-out,
     height 420ms var(--ease-out);
 }
 
 .example-preview[data-open] .example-pop {
   opacity: 1;
+  filter: none;
   transform: none;
-  /* Opening: a slight bounce. */
+  /* Opening: a slight bounce, sharpening as it fades in. */
   transition:
     opacity 160ms var(--ease-out),
+    filter 220ms var(--ease-out),
     transform 480ms var(--ease-pop),
     height 420ms var(--ease-out);
 }
@@ -592,6 +716,7 @@ html[data-riso] :is(.site-logo img, .social img) {
   }
   .example-pop,
   .example-preview[data-open] .example-pop {
+    filter: none;
     transform: none;
     transition: opacity 150ms ease-out;
   }
@@ -654,27 +779,47 @@ html[data-intro] .balloon {
   pointer-events: none;
 }
 
+/* No scrolling until the intro has settled, so it stays on the blue page. */
+html.intro-lock,
+html.intro-lock body {
+  overflow: hidden;
+  touch-action: none;
+}
+
 /* Directory */
 .launches {
   position: relative;
   background: #fff;
   padding-top: 16rem;
-  padding-bottom: 14rem;
+  /* The footer's clouds start solid white, so they carry on the space below. */
+  padding-bottom: 4rem;
 }
 
-/* Fades in the first time it's scrolled into view (see Launches.tsx). */
 .launches-table {
   width: 111.4rem;
   margin: 0 auto;
-  opacity: 0;
-  transform: translateY(1.6rem);
-  transition: opacity 700ms ease-out, transform 900ms var(--ease-out);
   font-family: "Repro Mono", ui-monospace, monospace;
 }
 
-.launches[data-visible="true"] .launches-table {
-  opacity: 1;
-  transform: none;
+/* The entrance (see Launches.tsx): the header pills pop in when they scroll
+   into view, and each row fades in as it does, starting blurred and a little
+   low. Rows that arrive together go one after another: --delay is set per row. */
+.launches-header:not([data-shown]) .header-tag {
+  opacity: 0;
+}
+
+.launch-row {
+  --fade: 900ms; /* how long each row takes to come in */
+  transition:
+    opacity var(--fade) var(--ease-out) var(--delay, 0ms),
+    transform var(--fade) var(--ease-out) var(--delay, 0ms),
+    filter var(--fade) var(--ease-out) var(--delay, 0ms);
+}
+
+.launch-row:not([data-shown]) {
+  opacity: 0;
+  transform: translateY(1rem);
+  filter: blur(0.8rem);
 }
 
 .launches-header {
@@ -721,10 +866,70 @@ html[data-intro] .balloon {
 }
 
 .launch-list {
+  position: relative;
   margin: 1.7624rem 0 0;
   padding: 0;
   list-style: none;
   overflow-anchor: none;
+}
+
+/* The hovered row's outline: a ring of small blue dots that circle clockwise.
+   There is one for the whole list; Launches.tsx springs --y and --h to the
+   hovered row's top and height (the motion is tuned there, in OUTLINE). */
+.launch-outline {
+  --dot: 0.3rem; /* size of each dot */
+  --dot-gap: 0.75rem; /* center to center */
+  --dot-step: 600ms; /* time for each dot to reach the next one's place */
+  --outset: 2rem; /* how far it reaches past the table's sides */
+  --radius: 1.4rem; /* corner rounding */
+  position: absolute;
+  left: calc(var(--outset) * -1);
+  right: calc(var(--outset) * -1);
+  top: 0;
+  height: var(--h, 0px);
+  transform: translateY(var(--y, 0px));
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 220ms ease-out;
+}
+
+.launch-outline[data-active] {
+  opacity: 1;
+  transition: opacity 120ms ease-out;
+}
+
+.launch-outline svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+/* Zero-length dashes with round ends draw as circles. */
+.launch-outline rect {
+  x: calc(var(--dot) / 2);
+  y: calc(var(--dot) / 2);
+  width: calc(100% - var(--dot));
+  height: calc(100% - var(--dot));
+  rx: var(--radius);
+  fill: none;
+  stroke: var(--blue);
+  stroke-width: var(--dot);
+  stroke-linecap: round;
+  stroke-dasharray: 0 var(--dot-gap);
+  animation: launch-outline-march var(--dot-step) linear infinite paused;
+}
+
+.launch-outline[data-active] rect {
+  animation-play-state: running;
+}
+
+/* The rectangle is drawn clockwise, so sliding the dots forward circles them clockwise. */
+@keyframes launch-outline-march {
+  to {
+    stroke-dashoffset: calc(var(--dot-gap) * -1);
+  }
 }
 
 /* The vertical padding fills the gaps between rows, so the click area is continuous. */
@@ -761,10 +966,8 @@ html[data-intro] .balloon {
   transform: translateY(-50%);
 }
 
+/* Sized and oversampled with the other filtered SVGs (see .site-logo img). */
 .launch-logo img {
-  position: absolute;
-  display: block;
-  max-width: none;
   -webkit-user-drag: none;
 }
 
@@ -773,10 +976,136 @@ html[data-intro] .balloon {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .launches-table {
-    transform: none;
+  .launch-row {
     transition: opacity 200ms ease-out;
   }
+
+  .launch-row:not([data-shown]) {
+    transform: none;
+    filter: none;
+  }
+
+  .launch-outline rect {
+    animation: none;
+  }
+}
+
+/* Footer (Footer.tsx): white fades back to blue through the hero's clouds,
+   with the HL mark and sign-off along the bottom edge. */
+.site-footer {
+  --clouds-height: 50.5rem; /* how far the white reaches down into the blue */
+  /* A full screen tall, like the hero, and never shorter than the clouds plus
+     some clear blue under them. */
+  --footer-height: max(64svh, var(--clouds-height));
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  align-items: flex-end;
+  min-height: var(--footer-height);
+  background: var(--blue);
+  overflow: clip;
+}
+
+/* The hero's cloud layer, flipped so it's solid white on top and clear below. */
+.footer-clouds {
+  position: absolute;
+  z-index: -1;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: var(--clouds-height);
+  transform: scaleY(-1);
+  pointer-events: none;
+}
+
+.footer-clouds .hero-white:not([data-shader]) {
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0), #fff 78%);
+}
+
+/* Here the clouds fill their whole layer. */
+.footer-clouds .hero-clouds,
+.footer-clouds .hero-clouds-top {
+  top: 0;
+}
+
+.footer-clouds .hero-clouds {
+  height: 100%;
+}
+
+/* Lined up with the directory's table: the mark on its left edge, the
+   sign-off on its right. */
+.footer-content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  width: 111.4rem;
+  margin: 0 auto;
+}
+
+.footer-mark {
+  position: relative;
+  flex: none;
+  width: 66.963rem;
+  height: 31.733rem;
+}
+
+.footer-mark img {
+  -webkit-user-drag: none;
+}
+
+/* Starts level with the top of the mark. The negative margin takes off the
+   empty space the font leaves above its capitals, so the letters themselves
+   line up with the mark's top edge, not just the text's box. */
+.footer-note {
+  align-self: flex-start;
+  margin: -0.275em 0 0;
+  color: #fff;
+  /* Same size as the tagline. */
+  font-weight: 500;
+  font-size: 2.0835rem;
+  line-height: 1.2;
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* Fades in when scrolled into view (see Footer.tsx), blurred to sharp. */
+.footer-note {
+  transition:
+    opacity 900ms var(--ease-out),
+    filter 900ms var(--ease-out);
+}
+
+.footer-note:not([data-shown]) {
+  opacity: 0;
+  filter: blur(0.8rem);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .footer-note {
+    transition: opacity 200ms ease-out;
+  }
+
+  .footer-note:not([data-shown]) {
+    filter: none;
+  }
+}
+
+.footer-note a {
+  display: block;
+  color: inherit;
+  font-family: "Repro Mono", ui-monospace, monospace;
+  font-weight: 400;
+  letter-spacing: -0.07em;
+  text-decoration: none;
+  text-transform: uppercase;
+}
+
+.footer-note a:focus-visible {
+  outline: 0.2rem solid #fff;
+  outline-offset: 0.3rem;
+  border-radius: 0.4rem;
 }
 
 /* Phones and small tablets */
@@ -813,7 +1142,25 @@ html[data-intro] .balloon {
   }
 
   .launches {
-    padding: 8rem 1.6rem 10rem;
+    padding: 8rem 1.6rem 3rem;
+  }
+
+  .site-footer {
+    --clouds-height: 34rem;
+  }
+
+  .footer-content {
+    width: 100%;
+    padding: 0 1.6rem;
+  }
+
+  .footer-mark {
+    width: 21rem;
+    height: 9.952rem;
+  }
+
+  .footer-note {
+    font-size: 1.6rem;
   }
 
   .launches-table {

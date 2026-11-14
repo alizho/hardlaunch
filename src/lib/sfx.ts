@@ -24,6 +24,30 @@ export const HOVER_OFF_SFX = {
   minInterval: 80,
 };
 
+// Directory rows (Launches.tsx). Moving onto a row plays ROW_HOVER_SFX, also
+// when coming straight from another row; leaving the list plays ROW_HOVER_OFF_SFX.
+// Same knobs as above: softer and lower, and allowed to repeat faster so a
+// quick sweep down the list ticks on every row.
+export const ROW_HOVER_SFX = {
+  volume: 0.16,
+  basePlaybackRate: 1.7,
+  pitchRandomization: 0.12,
+  volumeRandomization: 0.2,
+  trebleCutDb: 6,
+  trebleCutHz: 4000,
+  minInterval: 45,
+};
+
+export const ROW_HOVER_OFF_SFX = {
+  volume: 0.14,
+  basePlaybackRate: 1.4,
+  pitchRandomization: 0.08,
+  volumeRandomization: 0.2,
+  trebleCutDb: 72,
+  trebleCutHz: 4000,
+  minInterval: 80,
+};
+
 type SfxSettings = typeof HOVER_SFX;
 
 let ctx: AudioContext | null = null;
@@ -91,6 +115,8 @@ function play(s: SfxSettings) {
 
 export const playHover = () => play(HOVER_SFX);
 export const playHoverOff = () => play(HOVER_OFF_SFX);
+export const playRowHover = () => play(ROW_HOVER_SFX);
+export const playRowHoverOff = () => play(ROW_HOVER_OFF_SFX);
 
 // For React pointer handlers: mouse only, so taps on touch screens stay quiet.
 export function onHoverSfx(e: { pointerType: string }) {

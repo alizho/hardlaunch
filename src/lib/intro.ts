@@ -55,14 +55,36 @@ const LIFT_EASING = "cubic-bezier(0.45, 0, 0.2, 1)";
 // Out-circ: quick off the mark, then a long, soft settle.
 const WHITE_EASING = "cubic-bezier(0, 0.55, 0.45, 1)";
 const ASSET_TIMEOUT = 1500;
+// How blurred things start before they fade in and sharpen.
+const FADE_BLUR = "0.8rem";
+const SCROLL_LOCK = "intro-lock";
+// When the logo and the white have both come to rest.
+const SETTLED = Math.max(INTRO.lift + INTRO.liftDuration, INTRO.white + INTRO.whiteDuration);
 
 const root = document.documentElement;
 
 // Runs before the first render so nothing can paint ahead of the intro.
 // Reduced-motion visitors get the finished page straight away.
 export function prepareIntro() {
+  // A reload always starts at the top, where the intro plays, rather than
+  // wherever the page was scrolled to before.
+  history.scrollRestoration = "manual";
+  window.scrollTo(0, 0);
   if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
   root.dataset.intro = "pending";
+  // The page can't scroll until the intro has settled (see styles.css), so
+  // nothing below the hero shows while things are still moving into place.
+  root.classList.add(SCROLL_LOCK);
+  window.addEventListener("scroll", holdAtTop);
+}
+
+// The lock stops wheel, touch, and key scrolling. This catches what it can't,
+// such as tabbing to a link further down the page.
+const holdAtTop = () => window.scrollTo(0, 0);
+
+function unlockScroll() {
+  root.classList.remove(SCROLL_LOCK);
+  window.removeEventListener("scroll", holdAtTop);
 }
 
 export const isIntroPending = () => root.dataset.intro === "pending";
@@ -84,22 +106,31 @@ export function introAssetsReady() {
 // Uses the individual `scale` property so it never fights a `transform` that
 // layout, scroll, or physics already owns on the same element. Opacity finishes
 // halfway along the curve so the bounce's dips below 1 never make it flicker.
-export function pop(el: Element, delay: number, from: number, duration = 640, easing = BOUNCE_EASING) {
+// It also starts blurred and sharpens as it fades in. Pass `blur: false` for an
+// element that has a CSS filter of its own, which the blur would replace.
+export function pop(el: Element, delay: number, from: number, duration = 640, easing = BOUNCE_EASING, blur = true) {
+  const filter = (amount: string) => (blur ? { filter: `blur(${amount})` } : {});
   return el.animate(
     [
-      { opacity: 0, scale: from },
-      { opacity: 1, scale: (from + 1) / 2, offset: 0.5 },
-      { opacity: 1, scale: 1 },
+      { opacity: 0, scale: from, ...filter(FADE_BLUR) },
+      { opacity: 1, scale: (from + 1) / 2, offset: 0.5, ...filter("0") },
+      { opacity: 1, scale: 1, ...filter("0") },
     ],
     { delay, duration, easing, fill: "backwards" },
   );
 }
+
+// The pop the hero's social buttons come in with, for anything else that
+// should match them (the directory's header pills).
+export const popButton = (el: Element, delay: number) =>
+  pop(el, delay, 0.6, INTRO.socialsDuration, SOCIALS_EASING);
 
 // Plays everything except the balloons, which BalloonField drives because their
 // positions belong to the physics world. Returns a cleanup function.
 export function playIntro() {
   let cancelled = false;
   let revealTimer = 0;
+  let unlockTimer = 0;
   const running: Animation[] = [];
 
   introAssetsReady().then(() => {
@@ -132,26 +163,33 @@ export function playIntro() {
     for (const tagline of find(".tagline")) {
       running.push(
         tagline.animate(
-          { opacity: [0, 1] },
+          { opacity: [0, 1], filter: [`blur(${FADE_BLUR})`, "blur(0)"] },
           { delay: INTRO.tagline, duration: 500, easing: "ease-out", fill: "backwards" },
         ),
       );
     }
 
     // The social buttons pop in under the logo, ahead of the tagline.
+    // The scroll arrow pops in the same way, once the page can scroll.
+    for (const arrow of find(".scroll-arrow")) running.push(popButton(arrow, SETTLED));
+
     find(".social").forEach((button, i) => {
-      running.push(pop(button, INTRO.socials + i * INTRO.socialsStagger, 0.6, INTRO.socialsDuration, SOCIALS_EASING));
+      running.push(popButton(button, INTRO.socials + i * INTRO.socialsStagger));
     });
 
     root.dataset.intro = "playing";
     revealTimer = window.setTimeout(() => {
       delete root.dataset.intro;
     }, INTRO.tagline);
+    unlockTimer = window.setTimeout(unlockScroll, SETTLED);
   });
 
   return () => {
     cancelled = true;
     clearTimeout(revealTimer);
+    clearTimeout(unlockTimer);
+    // If it was cut short after starting, it won't run again to unlock the page.
+    if (!isIntroPending()) unlockScroll();
     running.forEach((animation) => animation.cancel());
   };
 }

@@ -15,23 +15,30 @@ export type RisoSettings = {
   assetGrain: number; // specks missing from the logo and icons
 };
 
-// To change what visitors see, tune in the panel, press Copy, and paste here.
+// Set to true to bring back the RISO tab on the right edge of the screen, with
+// live sliders for everything below. While it's off, RISO_DEFAULTS is always
+// what shows; while it's on, changes made in the panel are saved in the browser.
+export const RISO_PANEL = false;
+
+// The look every visitor gets. Edit the numbers here, or turn the panel on,
+// tune there, press Copy, and paste the result over this.
 export const RISO_DEFAULTS: RisoSettings = {
   enabled: true,
-  halftone: 1,
-  cell: 6,
-  angle: 20,
-  softness: 0.15,
-  density: 0.96,
-  grain: 0.22,
-  grainSize: 1,
-  assetGrain: 0.25,
+  halftone: 0.55,
+  cell: 3,
+  angle: 27,
+  softness: 0.37,
+  density: 1,
+  grain: 0.06,
+  grainSize: 0.9,
+  assetGrain: 0,
 };
 
 const STORAGE_KEY = "riso";
 const TILE = 256; // specks per side of the repeating grain tile
 
 function load(): RisoSettings {
+  if (!RISO_PANEL) return RISO_DEFAULTS;
   try {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "null");
     if (saved && typeof saved === "object") return { ...RISO_DEFAULTS, ...saved };
@@ -75,7 +82,8 @@ function apply() {
     return;
   }
   tiles ??= makeTiles();
-  root.dataset.riso = "";
+  // "assets" also cuts grain out of the logo and icons; skipped when there's none.
+  root.dataset.riso = settings.assetGrain > 0 ? "assets" : "";
   root.style.setProperty("--riso-paper-tile", tiles?.paper ?? "none");
   root.style.setProperty("--riso-ink-tile", tiles?.ink ?? "none");
   root.style.setProperty("--riso-tile-size", `${TILE * settings.grainSize}px`);

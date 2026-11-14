@@ -1,10 +1,42 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, type PointerEvent } from "react";
 import { launches, type Launch } from "../lib/companies";
+import { popButton } from "../lib/intro";
+import { playRowHover, playRowHoverOff } from "../lib/sfx";
+
+// How the hovered row's outline moves between rows. Its top and bottom edges
+// are two springs. The edge facing the way the cursor is going is stiffer, so it
+// gets there first and the outline stretches, then the other edge catches up.
+const OUTLINE = {
+  lead: 520, // stiffness of the leading edge; higher gets there faster
+  trail: 150, // stiffness of the trailing edge; lower stretches longer
+  leadDamping: 0.72, // below 1 overshoots a little before settling, 1 doesn't
+  trailDamping: 0.9,
+  // The cursor's speed is handed to the leading edge, so a fast flick stretches
+  // further than a slow move. `kick` is the share of that speed it gets, and
+  // `maxKick` the most it can get, in px per second.
+  kick: 0.45,
+  maxKick: 2600,
+  minHeight: 12, // px; the edges never get closer than this
+};
+
+// The directory's entrance. Staggers are in ms; how long each row's fade takes
+// is --fade under .launch-row in styles.css.
+const PILL_STAGGER = 70;
+const ROW_STAGGER = 80; // between rows that scroll into view at the same time
+const REVEAL_INSET = 8; // % of the screen's height a row must clear before it shows
+
+type Edge = { at: number; speed: number; goal: number };
 
 // Each row opens the company's launch post in a new tab.
-function Row({ launch }: { launch: Launch }) {
+function Row({
+  launch,
+  onEnter,
+}: {
+  launch: Launch;
+  onEnter: (e: PointerEvent<HTMLLIElement>) => void;
+}) {
   return (
-    <li className="launch-row">
+    <li className="launch-row" onPointerEnter={onEnter}>
       <a
         className="launch-head"
         style={{ minHeight: `calc(${launch.h / 10}rem + 3.5248rem)` }}
@@ -13,12 +45,7 @@ function Row({ launch }: { launch: Launch }) {
         rel="noreferrer"
       >
         <span className="launch-logo" style={{ width: `${launch.w / 10}rem`, height: `${launch.h / 10}rem` }}>
-          <img
-            src={launch.logo}
-            alt=""
-            draggable={false}
-            style={{ inset: 0, width: "100%", height: "100%" }}
-          />
+          <img src={launch.logo} alt="" draggable={false} />
         </span>
         <span className="launch-name" style={{ color: launch.color }}>{launch.name}</span>
         <span className="launch-year">{launch.year}</span>
@@ -28,27 +55,150 @@ function Row({ launch }: { launch: Launch }) {
 }
 
 export function Launches() {
-  const [visible, setVisible] = useState(false);
   const section = useRef<HTMLElement>(null);
+  const outline = useRef<HTMLLIElement>(null);
 
-  // Fades in the first time it's scrolled into view, then stays.
+  // One dotted outline for the whole list. It fades in around the first row the
+  // mouse reaches, springs to each row after that, and fades out when the mouse
+  // leaves the list.
+  const motion = useRef({
+    top: { at: 0, speed: 0, goal: 0 } as Edge,
+    bottom: { at: 0, speed: 0, goal: 0 } as Edge,
+    direction: 0, // 1 while heading down the list, -1 heading up
+    raf: 0,
+    last: 0,
+    // The cursor's vertical speed, in px per second, and when it was measured.
+    pointer: { y: 0, t: 0, speed: 0 },
+  });
+
+  const draw = () => {
+    const el = outline.current;
+    const { top, bottom } = motion.current;
+    if (!el) return;
+    el.style.setProperty("--y", `${top.at.toFixed(2)}px`);
+    el.style.setProperty("--h", `${(bottom.at - top.at).toFixed(2)}px`);
+  };
+
+  const tick = (now: number) => {
+    const m = motion.current;
+    // Small fixed steps keep the springs stable when a frame runs long.
+    let remaining = Math.min((now - m.last) / 1000, 0.05);
+    m.last = now;
+    while (remaining > 0) {
+      const dt = Math.min(remaining, 1 / 240);
+      remaining -= dt;
+      for (const edge of [m.top, m.bottom]) {
+        const leading = edge === (m.direction > 0 ? m.bottom : m.top);
+        const stiffness = leading ? OUTLINE.lead : OUTLINE.trail;
+        const damping = 2 * Math.sqrt(stiffness) * (leading ? OUTLINE.leadDamping : OUTLINE.trailDamping);
+        edge.speed += (stiffness * (edge.goal - edge.at) - damping * edge.speed) * dt;
+        edge.at += edge.speed * dt;
+      }
+      // The edges can't cross or pinch shut.
+      if (m.bottom.at - m.top.at < OUTLINE.minHeight) {
+        if (m.direction > 0) m.top.at = m.bottom.at - OUTLINE.minHeight;
+        else m.bottom.at = m.top.at + OUTLINE.minHeight;
+      }
+    }
+    const settled = [m.top, m.bottom].every(
+      (edge) => Math.abs(edge.goal - edge.at) < 0.1 && Math.abs(edge.speed) < 2,
+    );
+    if (settled) {
+      for (const edge of [m.top, m.bottom]) {
+        edge.at = edge.goal;
+        edge.speed = 0;
+      }
+    }
+    draw();
+    m.raf = settled ? 0 : requestAnimationFrame(tick);
+  };
+
+  const trackPointer = (e: PointerEvent) => {
+    if (e.pointerType !== "mouse") return;
+    const { pointer } = motion.current;
+    const now = performance.now();
+    const dt = (now - pointer.t) / 1000;
+    // Averaged with the last reading, so one jittery event doesn't decide it.
+    if (dt > 0 && dt < 0.1) pointer.speed = (pointer.speed + (e.clientY - pointer.y) / dt) / 2;
+    else pointer.speed = 0;
+    pointer.y = e.clientY;
+    pointer.t = now;
+  };
+
+  const enterRow = (e: PointerEvent<HTMLLIElement>) => {
+    const el = outline.current;
+    if (e.pointerType !== "mouse" || !el) return;
+    const m = motion.current;
+    const row = e.currentTarget;
+    const top = row.offsetTop;
+    const arriving = !("active" in el.dataset);
+    m.direction = Math.sign(top - m.top.goal);
+    m.top.goal = top;
+    m.bottom.goal = top + row.offsetHeight;
+    if (arriving || matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      // Arriving from outside the list: jump to the row rather than slide from the last one.
+      for (const edge of [m.top, m.bottom]) {
+        edge.at = edge.goal;
+        edge.speed = 0;
+      }
+      draw();
+    } else {
+      // A cursor that has paused isn't moving, whatever its last reading said.
+      const speed = performance.now() - m.pointer.t < 80 ? m.pointer.speed : 0;
+      const kick = Math.max(-OUTLINE.maxKick, Math.min(OUTLINE.maxKick, speed * OUTLINE.kick));
+      if (Math.sign(kick) === m.direction) (m.direction > 0 ? m.bottom : m.top).speed += kick;
+      if (!m.raf) {
+        m.last = performance.now();
+        m.raf = requestAnimationFrame(tick);
+      }
+    }
+    el.dataset.active = "";
+    playRowHover();
+  };
+
+  const leaveList = (e: PointerEvent) => {
+    const el = outline.current;
+    if (e.pointerType !== "mouse" || !el || !("active" in el.dataset)) return;
+    delete el.dataset.active;
+    playRowHoverOff();
+  };
+
+  useEffect(() => () => cancelAnimationFrame(motion.current.raf), []);
+
+  // The entrance. The header pills pop like the hero's buttons when they scroll
+  // into view, and each row fades in as it does (that part is in styles.css).
+  // Rows that come into view together are staggered from the top down.
   useEffect(() => {
     const el = section.current;
     if (!el) return;
+    const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const pops: Animation[] = [];
     const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (!entry.isIntersecting) return;
-        setVisible(true);
-        observer.disconnect();
+      (entries) => {
+        let arrived = 0;
+        for (const { target, isIntersecting } of entries) {
+          if (!isIntersecting || !(target instanceof HTMLElement)) continue;
+          observer.unobserve(target);
+          if (target.matches(".launch-row")) {
+            target.style.setProperty("--delay", `${arrived++ * ROW_STAGGER}ms`);
+          } else if (!reduced) {
+            target.querySelectorAll(".header-tag").forEach((pill, i) => pops.push(popButton(pill, i * PILL_STAGGER)));
+          }
+          target.dataset.shown = "";
+        }
       },
-      { rootMargin: "0px 0px -12% 0px" },
+      // A row counts as in view once it's this far above the bottom of the screen.
+      { rootMargin: `0px 0px -${REVEAL_INSET}% 0px` },
     );
-    observer.observe(el);
-    return () => observer.disconnect();
+    el.querySelectorAll(".launches-header, .launch-row").forEach((item) => observer.observe(item));
+    return () => {
+      observer.disconnect();
+      pops.forEach((animation) => animation.cancel());
+    };
   }, []);
 
   return (
-    <section id="launches" className="launches" ref={section} data-visible={visible}>
+    <section id="launches" className="launches" ref={section}>
       <div className="launches-table">
         <div className="launches-header">
           <div className="launches-header-left">
@@ -57,10 +207,15 @@ export function Launches() {
           </div>
           <span className="header-tag">Year launched</span>
         </div>
-        <ul className="launch-list">
+        <ul className="launch-list" onPointerMove={trackPointer} onPointerLeave={leaveList}>
           {launches.map((launch) => (
-            <Row key={launch.id} launch={launch} />
+            <Row key={launch.id} launch={launch} onEnter={enterRow} />
           ))}
+          <li className="launch-outline" ref={outline} aria-hidden="true">
+            <svg>
+              <rect />
+            </svg>
+          </li>
         </ul>
       </div>
     </section>

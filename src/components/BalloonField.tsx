@@ -3,7 +3,7 @@ import { BalloonWorld, type Body } from "../lib/balloons";
 import { balloons } from "../lib/companies";
 import { INTRO, introAssetsReady, isIntroPending, pop } from "../lib/intro";
 import type { Point } from "../data/content";
-import { ORBIT_EVENT } from "./Logo";
+import { BALLOON_DEFAULT, ORBIT_EVENT } from "./Logo";
 import { onHoverOffSfx, onHoverSfx } from "../lib/sfx";
 
 const FIGMA_WIDTH = 1728;
@@ -23,10 +23,6 @@ const PHONE_SCATTER_REACH: Point = [195, 300];
 const SCATTER_EDGE = 16; // space scattered balloons keep from the edges of the screen
 const SCATTER_LOGO_GAP = 60; // space scattered balloons keep from the logo
 const SCATTER_TRIES = 120;
-// A press that moves less than this (px) and lets go within this time (ms)
-// is a click, which opens the company's link, rather than a drag.
-const CLICK_SLOP = 6;
-const CLICK_TIME = 500; // valid spots compared per balloon; more spreads them more evenly
 
 // Points spaced evenly by distance around an ellipse, starting half a step past
 // its right edge so the top and bottom halves get the same number.
@@ -216,21 +212,12 @@ export function BalloonField({ heroRef, logoRef }: Props) {
     hero.dataset.balloons = "ready";
 
     if (reduced) {
-      // No dragging here, so any click opens the link.
-      const onClick = (e: MouseEvent) => {
-        const link = balloons[elements.current.indexOf(e.currentTarget as HTMLDivElement)]?.link;
-        if (link) window.open(link, "_blank", "noopener,noreferrer");
-      };
       const onResize = () => {
         measure();
         world.render();
       };
       window.addEventListener("resize", onResize);
-      elements.current.forEach((el) => el?.addEventListener("click", onClick));
-      return () => {
-        window.removeEventListener("resize", onResize);
-        elements.current.forEach((el) => el?.removeEventListener("click", onClick));
-      };
+      return () => window.removeEventListener("resize", onResize);
     }
 
     // Pointer tracking: page-wide so a fast sweep into the hero still registers.
@@ -250,12 +237,10 @@ export function BalloonField({ heroRef, logoRef }: Props) {
       world.movePointer(p.x, p.y, (now - lastMove) / 1000, p.inside);
       lastMove = now;
     };
-    let press: { x: number; y: number; t: number; link?: string } | null = null;
     const onDown = (e: PointerEvent) => {
       const index = elements.current.indexOf(e.currentTarget as HTMLDivElement);
       const body = world.bodies[index];
       if (!body) return;
-      press = { x: e.clientX, y: e.clientY, t: performance.now(), link: balloons[index]?.link };
       e.preventDefault();
       const p = toWorld(e);
       world.movePointer(p.x, p.y, 0, true);
@@ -265,17 +250,7 @@ export function BalloonField({ heroRef, logoRef }: Props) {
       body.el.setPointerCapture(e.pointerId);
       root.classList.add("is-grabbing");
     };
-    const onUp = (e: PointerEvent) => {
-      const p = press;
-      press = null;
-      if (
-        e.type === "pointerup" &&
-        p?.link &&
-        Math.hypot(e.clientX - p.x, e.clientY - p.y) < CLICK_SLOP &&
-        performance.now() - p.t < CLICK_TIME
-      ) {
-        window.open(p.link, "_blank", "noopener,noreferrer");
-      }
+    const onUp = () => {
       if (!world.grabbed) return;
       world.release();
       root.classList.remove("is-grabbing");
@@ -327,6 +302,9 @@ export function BalloonField({ heroRef, logoRef }: Props) {
     });
     visibility.observe(hero);
 
+    // No intro to wait for (it only plays once per load), so start circling now.
+    if (!intro && BALLOON_DEFAULT === "orbit") world.startOrbit();
+
     let cancelled = false;
     let releaseTimer = 0;
     const pops: Animation[] = [];
@@ -335,15 +313,20 @@ export function BalloonField({ heroRef, logoRef }: Props) {
         if (cancelled) return;
         elements.current.forEach((el, i) => {
           const img = el?.querySelector("img");
-          if (img) pops.push(pop(img, INTRO.balloonPop + i * INTRO.balloonStagger, 0.5, 640));
+          if (img) pops.push(pop(img, INTRO.balloonPop + i * INTRO.balloonStagger, 0.5, 640, undefined, false));
         });
         releaseTimer = window.setTimeout(() => {
           holding = false;
-          // They all leave together and float straight up from where they are.
-          const spots = world.settleStraightUp();
-          for (const b of world.bodies) {
-            const spot = spots.get(b)!;
-            world.launch(b, spot.x, spot.y, INTRO.balloonFloat / 1000);
+          if (BALLOON_DEFAULT === "orbit") {
+            // They swing out from where they are into the ring around the content.
+            world.startOrbit();
+          } else {
+            // They all leave together and float straight up from where they are.
+            const spots = world.settleStraightUp();
+            for (const b of world.bodies) {
+              const spot = spots.get(b)!;
+              world.launch(b, spot.x, spot.y, INTRO.balloonFloat / 1000);
+            }
           }
           start();
         }, INTRO.lift);

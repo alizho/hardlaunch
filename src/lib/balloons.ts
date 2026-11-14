@@ -29,6 +29,7 @@ type Orbit = {
 type OrbitPlan = {
   fromAngle: number; // where it was round the content, in the oval's own terms
   fromF: number; // how far out it was (1 = on the oval)
+  fromRot: number; // the tilt it had, in degrees
   advance: number; // how far forward it moves on top of the steady lap, to reach its place
   duration: number; // seconds to get there
   f: number; // its settled distance out, by layer
@@ -235,6 +236,7 @@ export class BalloonWorld {
       plans.set(s.b, {
         fromAngle: angles[i],
         fromF: s.f,
+        fromRot: s.b.rot,
         advance: advances[i],
         // Long enough that its sweep starts no faster than ORBIT_ENTRY_RATE
         // (trailOff starts at 3 x the average), so further ones take longer.
@@ -565,10 +567,16 @@ export class BalloonWorld {
     for (const b of this.bodies) {
       const sway = Math.sin(this.time * 0.8 + b.phase) * 2.5;
       const target = clamp(b.vx * 0.03, -20, 20) + sway;
+      const plan = this.orbit?.plans.get(b);
+      const entry = plan ? this.progress(plan, this.time - this.orbit!.start) : 1;
       if (b.launch) {
         // Unwinds along the float's own curve, so the starting tilt never snaps.
         const t = Math.min(1, (this.time - b.launch.start) / b.launch.duration);
         b.rot = b.launch.fromRot + (target - b.launch.fromRot) * liftCurve(t);
+      } else if (plan && entry < 1) {
+        // Joining the orbit: the tilt it had (the intro's, say) unwinds over
+        // the whole way in, starting and ending gently, rather than at once.
+        b.rot = plan.fromRot + (target - plan.fromRot) * entry * entry * (3 - 2 * entry);
       } else {
         b.rot += (target - b.rot) * (1 - Math.exp(-dt * 5));
       }
