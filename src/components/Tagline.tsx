@@ -183,6 +183,7 @@ export function Tagline() {
           {", "}
         </Fragment>
       ))}
+      <br />
       &amp; whatever else it takes
       <span className="example-preview" ref={previewRef} data-open={open || undefined} aria-hidden="true">
         <span className="example-track" ref={trackRef}>
