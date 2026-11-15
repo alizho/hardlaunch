@@ -85,6 +85,23 @@ export function Launches() {
     el.style.setProperty("--h", `${(bottom.at - top.at).toFixed(2)}px`);
   };
 
+  // Fits a whole number of dots around the outline. The dots are spaced along
+  // the rectangle's edge, which starts and ends at the top-left corner; if the
+  // distance around isn't a whole number of gaps, the leftover makes a seam
+  // there, where a dot vanishes and another pops in a little way off. Telling
+  // the rectangle its edge is exactly that many gaps long spreads the leftover
+  // evenly, and the dots stretch with the outline as it springs between rows.
+  const fitDots = () => {
+    const rect = outline.current?.querySelector("rect");
+    if (!rect) return;
+    // The gap as styles.css sets it (--dot-gap), in px: "0px, 5.5px" -> 5.5
+    const gap = parseFloat(getComputedStyle(rect).strokeDasharray.split(/[\s,]+/).pop() ?? "");
+    rect.removeAttribute("pathLength");
+    const around = rect.getTotalLength();
+    if (!(gap > 0) || !(around > gap)) return;
+    rect.setAttribute("pathLength", (Math.round(around / gap) * gap).toFixed(3));
+  };
+
   const tick = (now: number) => {
     const m = motion.current;
     // Small fixed steps keep the springs stable when a frame runs long.
@@ -148,6 +165,7 @@ export function Launches() {
         edge.speed = 0;
       }
       draw();
+      fitDots();
     } else {
       // A cursor that has paused isn't moving, whatever its last reading said.
       const speed = performance.now() - m.pointer.t < 80 ? m.pointer.speed : 0;

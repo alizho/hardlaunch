@@ -2,10 +2,10 @@
 // one and a thinner one behind it, sliding from left to right. It plays when
 // the intro lands the logo and whenever the logo is clicked. The bands' colors,
 // widths and angle are .logo-shine in styles.css.
-const DURATION = 1600; // one band's trip across, in ms
-const TRAIL = 170; // how long after the wide band the thin one sets off
+const DURATION = 2400; // one band's trip across, in ms
+const TRAIL = 200; // how long after the wide band the thin one sets off
 // Slow to leave, quick through the middle, soft to land.
-const EASING = "cubic-bezier(0.7, 0, 0.2, 1)";
+const EASING = "cubic-bezier(0.65, 0, 0.2, 1)";
 
 // `delay` is in ms. Returns the animations, so a caller can cancel them.
 export function shineLogo(delay = 0): Animation[] {
