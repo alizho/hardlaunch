@@ -1,3 +1,5 @@
+import { shineLogo } from "./shine";
+
 // The page-load intro. Every beat is in ms from the moment the logo and balloons
 // have loaded, so the whole sequence can be retimed from this table.
 export const INTRO = {
@@ -21,6 +23,8 @@ export const INTRO = {
   socialsStagger: 70,
   socialsDuration: 760,
   socialsBounceSwings: 2, // fewer, slower swings than the other pops
+  // 4. Light crosses the logo as it lands.
+  shine: 2850,
 
   // The bounce on every intro pop.
   bounceSwings: 3.2, // frequency: half-swings per pop. Lower is fewer, slower swings.
@@ -176,6 +180,8 @@ export function playIntro() {
     find(".social").forEach((button, i) => {
       running.push(popButton(button, INTRO.socials + i * INTRO.socialsStagger));
     });
+
+    running.push(...shineLogo(INTRO.shine));
 
     root.dataset.intro = "playing";
     revealTimer = window.setTimeout(() => {

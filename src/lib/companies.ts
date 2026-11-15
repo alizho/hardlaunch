@@ -28,7 +28,7 @@ export type BalloonDef = {
   scatterPhone: Point;
 };
 
-export type Launch = Pick<Company, "id" | "name" | "year" | "color" | "link"> & {
+export type Launch = Pick<Company, "id" | "name" | "date" | "color" | "link"> & {
   logo: string;
   w: number;
   h: number;
@@ -140,12 +140,14 @@ function placeBalloons(): BalloonDef[] {
 }
 
 function toLaunch(company: Company): Launch {
-  const { id, name, year, color, link, directoryWidth } = company;
+  const { id, name, date, color, link, directoryWidth } = company;
   const own = readArt(`${id}.directory`);
   const art = own ?? balloonArt(id);
   const w = directoryWidth ?? (own ? own.w : art.w * DIRECTORY_SCALE);
-  return { id, name, year, color, link, logo: art.src, w, h: (w * art.h) / art.w };
+  return { id, name, date, color, link, logo: art.src, w, h: (w * art.h) / art.w };
 }
 
 export const balloons = placeBalloons();
-export const launches = companies.map(toLaunch);
+// The directory lists the newest launches first. "YYYY-MM" sorts as text, and
+// the sort is stable, so companies in the same month keep their order in content.ts.
+export const launches = [...companies].sort((a, b) => b.date.localeCompare(a.date)).map(toLaunch);

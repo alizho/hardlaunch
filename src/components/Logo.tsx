@@ -1,6 +1,7 @@
 import { useLayoutEffect, type MouseEvent, type RefObject } from "react";
 import { useFollow } from "../lib/useFollow";
 import { onHoverOffSfx, onHoverSfx } from "../lib/sfx";
+import { shineLogo } from "../lib/shine";
 
 // What the balloons do once the intro lets them go:
 //   "orbit": they circle the logo and text at the top of the page, float up
@@ -16,7 +17,7 @@ export const BALLOON_DEFAULT: "orbit" | "float" = "orbit";
 const cssDrivesScroll = () => CSS.supports("animation-timeline: scroll()");
 
 export function Logo({ logoRef }: { logoRef: RefObject<HTMLHeadingElement | null> }) {
-  const { hitRef, targetRef } = useFollow<HTMLAnchorElement, HTMLImageElement>(0.5);
+  const { hitRef, targetRef } = useFollow<HTMLAnchorElement, HTMLSpanElement>(0.5);
 
   useLayoutEffect(() => {
     const el = logoRef.current;
@@ -59,17 +60,26 @@ export function Logo({ logoRef }: { logoRef: RefObject<HTMLHeadingElement | null
     };
   }, [logoRef]);
 
-  // A click goes back to the top of the page.
-  const toTop = (e: MouseEvent) => {
+  // A click goes back to the top of the page, and light crosses the logo
+  // (see lib/shine.ts).
+  const onClick = (e: MouseEvent) => {
     e.preventDefault();
     const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
     window.scrollTo({ top: 0, behavior: reduced ? "auto" : "smooth" });
+    shineLogo();
   };
 
   return (
     <h1 className="site-logo" ref={logoRef}>
-      <a href="/" aria-label="Hard Launch" ref={hitRef} onClick={toTop} onPointerEnter={onHoverSfx} onPointerLeave={onHoverOffSfx}>
-        <img src="/assets/hero/logo.svg" alt="" draggable={false} ref={targetRef} />
+      <a href="/" aria-label="Hard Launch" ref={hitRef} onClick={onClick} onPointerEnter={onHoverSfx} onPointerLeave={onHoverOffSfx}>
+        {/* The art and the light over it lean toward the cursor together. */}
+        <span className="logo-art" ref={targetRef}>
+          <img src="/assets/hero/logo.svg" alt="" draggable={false} />
+          <span className="logo-shine" aria-hidden="true">
+            <span />
+            <span />
+          </span>
+        </span>
       </a>
     </h1>
   );

@@ -2,6 +2,14 @@ import { useEffect, useRef, type PointerEvent } from "react";
 import { launches, type Launch } from "../lib/companies";
 import { playRowHover, playRowHoverOff } from "../lib/sfx";
 
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+// "2026-11" -> "Nov 2026"
+const monthLabel = (date: string) => {
+  const [year, month] = date.split("-");
+  return `${MONTHS[Number(month) - 1]} ${year}`;
+};
+
 // How the hovered row's outline moves between rows. Its top and bottom edges
 // are two springs. The edge facing the way the cursor is going is stiffer, so it
 // gets there first and the outline stretches, then the other edge catches up.
@@ -46,7 +54,7 @@ function Row({
           <img src={launch.logo} alt="" draggable={false} />
         </span>
         <span className="launch-name" style={{ color: launch.color }}>{launch.name}</span>
-        <span className="launch-year">{launch.year}</span>
+        <span className="launch-date">{monthLabel(launch.date)}</span>
       </a>
     </li>
   );

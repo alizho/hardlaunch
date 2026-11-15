@@ -198,6 +198,56 @@ html.custom-cursor * {
   height: 100%;
 }
 
+/* Holds the logo art and the light that crosses it (see lib/shine.ts). */
+.logo-art {
+  position: absolute;
+  inset: 0;
+  display: block;
+}
+
+/* The light only shows where the logo is. */
+.logo-shine {
+  position: absolute;
+  inset: 0;
+  -webkit-mask: url("/assets/hero/logo.svg") center / 100% 100% no-repeat;
+  mask: url("/assets/hero/logo.svg") center / 100% 100% no-repeat;
+  pointer-events: none;
+}
+
+/* The bands of light, each fading to nothing at both edges and leaning
+   forward. They wait unseen and lib/shine.ts slides them across. */
+.logo-shine span {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+}
+
+/* The wide one: pale pink, lilac, white, mint and butter. */
+.logo-shine span:first-child {
+  background: linear-gradient(
+    115deg,
+    rgb(255 255 255 / 0) 28%,
+    rgb(255 204 232 / 0.4) 37%,
+    rgb(218 206 255 / 0.55) 44%,
+    rgb(255 255 255 / 0.8) 50%,
+    rgb(196 255 238 / 0.55) 56%,
+    rgb(255 245 196 / 0.4) 63%,
+    rgb(255 255 255 / 0) 72%
+  );
+}
+
+/* The thin one that follows it. */
+.logo-shine span:last-child {
+  background: linear-gradient(
+    115deg,
+    rgb(255 255 255 / 0) 44.5%,
+    rgb(218 206 255 / 0.4) 47.5%,
+    rgb(255 255 255 / 0.7) 50%,
+    rgb(196 255 238 / 0.4) 52.5%,
+    rgb(255 255 255 / 0) 55.5%
+  );
+}
+
 /* Safari draws the filters inside an SVG image at one pixel per CSS pixel, which
    looks soft on dense screens. So the filtered art is laid out --oversample
    times larger, centered on its box, and scaled back down to its real size. */
@@ -867,12 +917,15 @@ html.intro-lock body {
 /* The directory starts --peek above the bottom of the hero, so the top of its
    first row shows through the clouds on the first screen: the
    cue that there's more below. That overlap is see-through; the hero is solid
-   white along its bottom edge, so the two meet without a seam. */
+   white along its bottom edge. The directory's white starts --seam above that
+   edge rather than exactly on it: sizes here are fractions of a pixel, and two
+   edges that only touch leave a hairline of the blue page between them. */
 .launches {
   --peek: 6.4rem;
+  --seam: 2px;
   position: relative;
   margin-top: calc(var(--peek) * -1);
-  background: linear-gradient(to bottom, transparent var(--peek), #fff 0);
+  background: linear-gradient(to bottom, transparent calc(var(--peek) - var(--seam)), #fff 0);
   /* The footer's clouds start solid white, so they carry on the space below. */
   padding-bottom: 4rem;
 }
@@ -1006,7 +1059,7 @@ html.intro-lock body {
   -webkit-user-drag: none;
 }
 
-.launch-year {
+.launch-date {
   color: var(--blue);
 }
 
@@ -1036,6 +1089,9 @@ html.intro-lock body {
   isolation: isolate;
   display: flex;
   align-items: flex-end;
+  /* Tucked under the directory's last 2px of white, so the two overlap instead
+     of only touching (see --seam on .launches). */
+  margin-top: -2px;
   min-height: var(--footer-height);
   /* The top edge is white under the flipped cloud layer, so any sub-pixel gap
      where the clouds meet the directory shows white, not a blue hairline. */
@@ -1212,4 +1268,5 @@ html.intro-lock body {
     padding-left: 5.8rem;
     font-size: 1.3rem;
   }
+
 }
